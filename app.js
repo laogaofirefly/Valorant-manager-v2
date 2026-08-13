@@ -497,4 +497,55 @@ availablePlayerProgression=function(){return true};
 const oldCompetitionMarket=competitionInfo;
 competitionInfo=function(){ensureLowerLeagues();const l=currentLeague(),authentic=state.leagueIndex>=3;const intro=state.leagueIndex===0?'从网吧包间打出名气，优先签下性价比高的地方选手。':state.leagueIndex===1?'在地区赛场建立战队品牌，逐步积累转会预算。':state.leagueIndex===2?'全国大赛是实力分水岭，强队和高价选手开始集中出现。':authentic&&state.leagueIndex===3?'Challengers CN 使用真实职业赛事与队伍，但所有选手仍可提前尝试签约。':'VCT CN 是最高级别赛场，顶级选手价格极高。';return `<section class="card wide progression-card"><div class="card-head"><h2>${l.name}</h2><span class="badge">阶段 ${state.leagueIndex+1}/5</span></div><p>${intro}</p><div class="event-meta"><span>赛制：${l.format}</span><span>参赛队：${l.teams} 队</span><span>${authentic?'真实赛事队伍与职业生态':'虚构赛事、队伍与选手'}</span><span>赛季：${state.leagueSeason.played}/8 场</span></div></section>`}
 if(state.division==='次级联赛')state.division='网吧赛';
-render();
+render();// Random incidents: occasional unscheduled events with meaningful trade-offs.
+const RANDOM_INCIDENTS=[
+ {id:'server',tag:'设备事故',title:'训练室服务器突然宕机',desc:'今晚的训练赛即将开始，维修或许会影响现金流。',choices:[['紧急维修','money',-18000,'资金 -¥18,000，准备度 +10'],['临时外租场地','money',-6000,'资金 -¥6,000，准备度 +4'],['取消训练','morale',-5,'士气 -5，但没有额外支出']]},
+ {id:'scout',tag:'球探情报',title:'球探发现一名无所属高潜选手',desc:'这名选手还没有名气，但可能是低成本补强机会。',choices:[['立刻试训','money',-12000,'资金 -¥12,000，声望 +8，准备度 +5'],['暂时观望','rep',3,'声望 +3，保留资金'],['放弃关注','chem',1,'化学反应 +1']]},
+ {id:'injury',tag:'选手状态',title:'主力选手训练中出现轻微伤病',desc:'医疗团队建议减少训练量，否则可能影响下场比赛。',choices:[['安排休养','morale',5,'士气 +5，准备度 -4'],['继续训练','prep',8,'准备度 +8，士气 -8'],['聘请理疗师','money',-15000,'资金 -¥15,000，士气 +4，准备度 +6']]},
+ {id:'viral',tag:'舆论热点',title:'战队短视频意外获得大量关注',desc:'流量是一把双刃剑，回应方式会影响战队形象。',choices:[['主动运营','rep',20,'声望 +20，粉丝 +300'],['低调处理','morale',3,'士气 +3，避免舆论压力'],['商业变现','money',22000,'资金 +¥22,000，声望 -4']]},
+ {id:'rules',tag:'赛事通知',title:'赛事方临时调整比赛时间',desc:'新的时间安排与原定训练计划发生冲突。',choices:[['接受调整','prep',6,'准备度 +6，行动安排被打乱'],['提交申诉','rep',8,'声望 +8，但士气 -3'],['放弃本场','money',-10000,'损失报名费 ¥10,000，避免连续作战']]},
+ {id:'contract',tag:'合同谈判',title:'一名竞争对手联系你的替补',desc:'对方愿意支付一笔转会补偿，但可能削弱你的阵容深度。',choices:[['拒绝报价','chem',4,'化学反应 +4，稳定队内阵容'],['接受报价','money',35000,'获得转会补偿 ¥35,000，阵容默契 -3'],['公开竞价','rep',12,'声望 +12，暂不改变阵容']]},
+ {id:'sponsor',tag:'品牌机会',title:'本地品牌提出限时联名活动',desc:'活动能带来现金，但会占用选手半天训练时间。',choices:[['接受合作','money',26000,'资金 +¥26,000，准备度 -5'],['专注比赛','prep',10,'准备度 +10，错过商业收入'],['提高报价','rep',10,'声望 +10，若谈判成功可获得更好机会']]},
+ {id:'review',tag:'战术复盘',title:'教练组发现对手正在研究你的招牌战术',desc:'是否现在投入资源开发备用体系？',choices:[['开发备用战术','money',-10000,'资金 -¥10,000，准备度 +14'],['维持原体系','chem',5,'化学反应 +5，准备度 -3'],['让选手自行调整','morale',2,'士气 +2，风险由选手承担']]}
+];
+function randomIncidentEffect(kind,value){
+ if(kind==='money')state.money=Math.max(0,(state.money||0)+value);
+ if(kind==='prep')state.prep=Math.max(0,Math.min(100,(state.prep||0)+value));
+ if(kind==='morale')state.morale=Math.max(0,Math.min(100,(state.morale||0)+value));
+ if(kind==='rep')state.reputation=Math.max(0,(state.reputation||0)+value);
+ if(kind==='chem')state.chemistry=Math.max(0,Math.min(100,(state.chemistry||0)+value));
+}
+function ensureRandomIncident(){
+ ensureStory();
+ if(state.randomIncident&&state.randomIncident.week!==state.week)state.randomIncident=null;
+}
+function triggerRandomIncident(){
+ ensureRandomIncident();
+ if(state.randomIncident)return;
+ const e=RANDOM_INCIDENTS[Math.floor(Math.random()*RANDOM_INCIDENTS.length)];
+ state.randomIncident={week:state.week,id:e.id,choice:null};
+ storySave();render();toast('本周出现了新的随机事件');
+}
+function resolveRandomIncident(index){
+ ensureRandomIncident();if(!state.randomIncident)return;if(state.randomIncident.choice!==null)return toast('该随机事件已经处理');
+ const e=RANDOM_INCIDENTS.find(x=>x.id===state.randomIncident.id)||RANDOM_INCIDENTS[0],c=e.choices[index];if(!c)return;
+ randomIncidentEffect(c[1],c[2]);
+ if((e.id==='viral'&&index===0)||(e.id==='scout'&&index===0))state.sponsorFans=(state.sponsorFans||0)+(e.id==='viral'?300:0);
+ if(e.id==='contract'&&index===1)state.chemistry=Math.max(0,(state.chemistry||0)-3);
+ if(e.id==='sponsor'&&index===2)state.prep=Math.max(0,(state.prep||0)-2);
+ if(e.id==='review'&&index===1)state.prep=Math.max(0,(state.prep||0)-3);
+ state.randomIncident.choice=index;state.events=state.events||[];state.events.unshift(`随机事件：${e.title}｜${c[3]}`);state.log=state.log||[];state.log.unshift(`随机事件：${e.title}｜${c[3]}`);storySave();toast(c[3]);render();
+}
+function randomIncidentPanel(){
+ ensureRandomIncident();if(!state.randomIncident)return '';
+ const e=RANDOM_INCIDENTS.find(x=>x.id===state.randomIncident.id)||RANDOM_INCIDENTS[0],done=state.randomIncident.choice!==null;
+ return `<section class="card wide random-incident"><div class="card-head"><h2>随机事件</h2><span class="badge">${done?'已处理':'待决定'}</span></div><span class="tag">${e.tag}</span><h3>${e.title}</h3><p class="muted">${e.desc}</p>${done?`<div class="event-result">你选择了：${e.choices[state.randomIncident.choice][0]}<small>${e.choices[state.randomIncident.choice][3]}</small></div>`:`<div class="event-choices">${e.choices.map((c,i)=>`<button onclick="resolveRandomIncident(${i})"><b>${c[0]}</b><small>${c[3]}</small></button>`).join('')}</div>`}</section>`;
+}
+const previousAdvanceWeekForIncidents=advanceWeek;
+advanceWeek=function(){
+ previousAdvanceWeekForIncidents();
+ // A new incident appears in roughly 40% of weeks, never more than once per week.
+ if(Math.random()<0.4&&!state.randomIncident){triggerRandomIncident();}
+};
+const previousGuidedDashboardForIncidents=guidedDashboard;
+guidedDashboard=function(){const html=previousGuidedDashboardForIncidents();return html.replace('<div class="guide-flow">',randomIncidentPanel()+'<div class="guide-flow">')};
