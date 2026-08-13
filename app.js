@@ -651,4 +651,36 @@ beginStory=function(name){oldBeginStoryMessages(name);if(state.storyFlags?.intro
 function notifyVctInvitation(){ensureStory();if(state.division!=='VCT CN')return;if(state.messages.some(m=>m.title==='VCT 官方邀请'))return;addMessage('VCT 官方邀请','你的战队已满足 VCT CN 参赛条件，请前往赛程页面确认参赛安排。',messageClock());render()}
 // Remove the old hard-coded VCT wording from existing saves immediately.
 if(state.messages.some(m=>m.title==='VCT 官方邀请')&&state.division!=='VCT CN'){state.messages=state.messages.filter(m=>m.title!=='VCT 官方邀请');storySave()}
-render();
+render();// Automatic story mode: every week advances the campaign without confirmation dialogs.
+const STORY_ARC=[
+ {week:1,title:'第一章：灯光亮起',text:'训练室的灯第一次为 VOLT Academy 亮起。五名年轻选手还不熟悉彼此，但所有人都知道，这不是一次普通的试训。',msg:'战队正式注册，次级联赛将在本月开始。'},
+ {week:2,title:'第二章：第一次争执',text:'训练赛中，队伍在残局处理上发生分歧。队长要求稳住节奏，决斗位却坚持主动寻找突破。',msg:'队内沟通出现分歧，化学反应暂时下降。'},
+ {week:3,title:'第三章：雨夜复盘',text:'输掉一场训练赛后，所有人留在训练室复盘到深夜。凌晨两点，第一套真正属于 VOLT 的战术终于成形。',msg:'复盘完成，比赛准备度提升。'},
+ {week:4,title:'第四章：公开赛首秀',text:'城市公开赛的场馆比想象中更嘈杂。你们赢下首图，却在第二图被对手拖入加时。',msg:'首场正式比赛即将到来，准备工作必须完成。'},
+ {week:5,title:'第五章：意外的对手',text:'一个老牌俱乐部的分析师注意到了你们的默认控图体系。下一场比赛，你们的战术将第一次被针对。',msg:'对手开始研究 VOLT，准备度和士气将影响比赛结果。'},
+ {week:6,title:'第六章：替补席上的声音',text:'替补选手在训练中提出了不同的地图理解。你意识到，真正的战队不是五个人的固定答案，而是所有人都能贡献答案。',msg:'青训与替补体系开始发挥作用。'},
+ {week:7,title:'第七章：预算警报',text:'房租、工资和赛事报名费同时到期。老板要求你在成绩与现金流之间做出取舍，但赛季已经没有回头路。',msg:'本月结算临近，请留意工资、房租与赞助收入。'},
+ {week:8,title:'第八章：晋级线',text:'常规赛最后一周，晋级线只差一场胜利。队伍没有再讨论名次，只把注意力放在下一回合。',msg:'赛季阶段即将结算，战绩将决定下一站。'},
+ {week:9,title:'第九章：更大的舞台',text:'晋级后，采访、赞助和试训邀请同时涌来。你们终于离职业赛场更近了一步，也第一次感到压力有了重量。',msg:'新联赛阶段开启，市场和对手强度同步提升。'},
+ {week:12,title:'第十章：职业边缘',text:'挑战者联赛的灯光比公开赛刺眼得多。每一次失误都会被剪进集锦，每一次胜利都会改变俱乐部的声望。',msg:'挑战者联赛阶段进入关键赛程。'},
+ {week:16,title:'第十一章：资格赛前夜',text:'你们站在通往 VCT CN 的最后一道门前。选手们没有庆祝，只把战术板擦干净，等待最后一场比赛。',msg:'VCT CN 资格赛窗口开启，所有准备将接受检验。'},
+ {week:20,title:'第十二章：名字被看见',text:'无论结果如何，VOLT Academy 已经不再是赛程表上的陌生名字。你的选择，终于开始影响更多人的职业生涯。',msg:'第一阶段剧情完成，后续将进入职业赛季。'}
+];
+function ensureStoryArc(){ensureStory();state.storyArc=state.storyArc||{lastWeek:0,chapter:0,history:[]};state.storyArc.history=Array.isArray(state.storyArc.history)?state.storyArc.history:[]}
+function storyChapterForWeek(){ensureStoryArc();const w=state.week||1;return STORY_ARC.find(x=>x.week===w)||null}
+function runAutomaticStory(){
+ ensureStoryArc();
+ const w=state.week||1;
+ if(state.storyArc.lastWeek===w)return;
+ state.storyArc.lastWeek=w;
+ const chapter=storyChapterForWeek();
+ if(chapter){state.storyArc.chapter=Math.max(state.storyArc.chapter,STORY_ARC.indexOf(chapter)+1);state.storyArc.history.unshift({week:w,title:chapter.title,text:chapter.text});state.storyArc.history=state.storyArc.history.slice(0,12);state.log=state.log||[];state.log.unshift(chapter.title+'：'+chapter.text);state.morale=Math.max(0,Math.min(100,(state.morale||70)+(w%3===0?3:-1)));if(w===3||w===8||w===12)state.prep=Math.min(100,(state.prep||0)+10);addMessage(chapter.title,chapter.msg,messageClock())}
+ else if(w%2===0){const reports=['训练室记录：队伍的默认控图执行更加稳定。','经纪团队报告：有两家俱乐部开始关注你们。','分析师简报：下一位对手擅长拖慢节奏。','后勤报告：设备维护完成，训练计划按时恢复。'];addMessage('自动剧情报告',reports[(w/2)%reports.length|0],messageClock())}
+ storySave();
+}
+function automaticStoryPanel(){ensureStoryArc();const h=state.storyArc.history||[],current=h[0];return `<section class="card wide story-auto-panel"><div class="card-head"><h2>自动剧情 · ${state.storyArc.chapter||0}/${STORY_ARC.length}</h2><span class="badge">强制推进</span></div>${current?`<article class="story-current"><span class="eyebrow">第 ${current.week} 周 · ${current.title}</span><p>${current.text}</p></article>`:'<p class="muted">剧情将在每周推进时自动发生。</p>'}<div class="story-timeline">${h.slice(1,5).map(x=>`<div><b>W${x.week} · ${x.title}</b><small>${x.text}</small></div>`).join('')}</div></section>`}
+const oldAdvanceForAutoStory=advanceWeek;
+advanceWeek=function(){oldAdvanceForAutoStory();runAutomaticStory();render()};
+const oldGuidedForAutoStory=storyDashboard;
+storyDashboard=function(){const html=oldGuidedForAutoStory();return html+automaticStoryPanel()};
+ensureStoryArc();runAutomaticStory();render();
