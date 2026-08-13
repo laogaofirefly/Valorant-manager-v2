@@ -786,4 +786,40 @@ ensureExpansion2();checkMilestones();render();// Performance layer: coalesce rep
   gameplaySave=save;
   moreSave=storySave;
   window.addEventListener('pagehide',writeSnapshot);
+})();// Gameplay expansion: weekly contracts, scouting missions and richer choice events.
+const WEEKLY_CONTRACTS=[
+ {id:'train',title:'训练营冲刺',desc:'本周完成 2 次训练或专项训练',target:2,reward:18000,check:s=>(s.weeklyStats?.training||0)},
+ {id:'scout',title:'全球球探报告',desc:'本周完成 1 次球探或分析行动',target:1,reward:22000,check:s=>(s.weeklyStats?.scout||0)},
+ {id:'community',title:'社区影响力',desc:'本周完成 1 次粉丝活动或媒体行动',target:1,reward:16000,check:s=>(s.weeklyStats?.media||0)},
+ {id:'win',title:'拿下关键胜利',desc:'本周赢得 1 场比赛',target:1,reward:35000,check:s=>(s.weeklyStats?.win||0)}
+];
+const CLUB_DECISIONS=[
+ {title:'选手直播邀请',body:'一名选手受邀参加热门直播。曝光能带来粉丝，但会占用训练时间。',choices:[['接受曝光',s=>{s.fans=(s.fans||0)+180;s.reputation=(s.reputation||0)+15}],['专注训练',s=>{s.prep=Math.min(100,(s.prep||0)+10);s.morale=Math.max(0,(s.morale||0)-1)}]]},
+ {title:'赞助商临时要求',body:'赞助商希望战队在下场比赛使用统一视觉物料。',choices:[['配合执行',s=>{s.money=(s.money||0)+12000;s.sponsorIncome=(s.sponsorIncome||0)+2000}],['拒绝改动',s=>{s.chemistry=Math.min(100,(s.chemistry||0)+3);s.reputation=Math.max(0,(s.reputation||0)-5)}]]},
+ {title:'对手泄露战术',body:'分析师发现对手内部训练记录，其中包含可能的战术信息。',choices:[['深入研究',s=>{s.prep=Math.min(100,(s.prep||0)+18);s.reputation=Math.max(0,(s.reputation||0)-3)}],['保持公平',s=>{s.reputation=(s.reputation||0)+12;s.morale=Math.min(100,(s.morale||0)+3)}]]},
+ {title:'替补选手申请首发',body:'替补认为自己已经准备好，需要一次证明自己的机会。',choices:[['安排试用',s=>{s.prep=Math.max(0,(s.prep||0)-4);s.chemistry=Math.min(100,(s.chemistry||0)+7);s.morale=Math.min(100,(s.morale||0)+5)}],['暂缓调整',s=>{s.prep=Math.min(100,(s.prep||0)+5);s.morale=Math.max(0,(s.morale||0)-3)}]]}
+];
+function ensureGameplayExpansion(){state.weeklyStats=state.weeklyStats||{training:0,scout:0,media:0,win:0};state.weeklyContract=state.weeklyContract||null;state.clubDecision=state.clubDecision||null}
+function resetWeeklyExpansion(){ensureGameplayExpansion();state.weeklyStats={training:0,scout:0,media:0,win:0};const pool=WEEKLY_CONTRACTS.filter(x=>x.id!==(state.weeklyContract&&state.weeklyContract.id));const c=pool[Math.floor(Math.random()*pool.length)]||WEEKLY_CONTRACTS[0];state.weeklyContract={id:c.id,title:c.title,desc:c.desc,target:c.target,reward:c.reward,claimed:false};state.clubDecision=null}
+function completeWeeklyContract(){ensureGameplayExpansion();const c=WEEKLY_CONTRACTS.find(x=>x.id===state.weeklyContract?.id);if(!c||state.weeklyContract.claimed)return;if(c.check(state)<c.target)return;state.money=(state.money||0)+c.reward;state.reputation=(state.reputation||0)+10;state.weeklyContract.claimed=true;addMessage('周目标完成：'+c.title,`奖励已发放：¥${c.reward.toLocaleString()}，声望 +10。`,messageClock());toast('周目标奖励已领取')}
+function takeClubDecision(index){ensureGameplayExpansion();const d=state.clubDecision;if(!d||d.choice!==null)return;const item=CLUB_DECISIONS[d.eventIndex]||CLUB_DECISIONS[0],choice=item.choices[index];if(!choice)return;choice[1](state);d.choice=index;state.log=state.log||[];state.log.unshift(`${item.title}：${choice[0]}`);storySave();toast(choice[0]+'，事件处理完成');render()}
+function weeklyExpansionPanel(){ensureGameplayExpansion();const c=WEEKLY_CONTRACTS.find(x=>x.id===state.weeklyContract?.id),progress=c?Math.min(c.target,c.check(state)):0;const d=state.clubDecision,item=d?CLUB_DECISIONS[d.eventIndex]:null;return `<section class="card wide weekly-expansion"><div class="card-head"><h2>本周经营委托</h2><span class="badge">${c?(state.weeklyContract.claimed?'已完成':progress+'/'+c.target):'生成中'}</span></div>${c?`<b>${c.title}</b><p class="muted">${c.desc}</p><div class="contract-progress"><i style="width:${progress/c.target*100}%"></i></div>${progress>=c.target&&!state.weeklyContract.claimed?'<button class="btn alt" onclick="completeWeeklyContract()">领取 ¥'+c.reward.toLocaleString()+' 奖励</button>':''}`:''}</section>${item?`<section class="card wide club-decision"><div class="card-head"><h2>俱乐部事件：${item.title}</h2><span class="badge">待处理</span></div><p class="muted">${item.body}</p>${item.choices.map((x,i)=>`<button class="btn alt decision-btn" onclick="takeClubDecision(${i})">${x[0]}</button>`).join('')}</section>`:''}`}
+const previousExpandedDashboard=dashboard;
+dashboard=function(){return previousExpandedDashboard()+weeklyExpansionPanel()};
+const previousExpandedAdvance=advanceWeek;
+advanceWeek=function(){ensureGameplayExpansion();previousExpandedAdvance();if(!state.weeklyContract||state.weeklyContract.claimed){resetWeeklyExpansion()}else{completeWeeklyContract()}if(Math.random()<0.55&&!state.clubDecision){state.clubDecision={eventIndex:Math.floor(Math.random()*CLUB_DECISIONS.length),choice:null};addMessage('新的俱乐部事件','管理中心出现了一项需要处理的经营决策。',messageClock())}storySave();render()};
+function markExpansionTraining(){ensureGameplayExpansion();state.weeklyStats.training++}
+function markExpansionScout(){ensureGameplayExpansion();state.weeklyStats.scout++}
+function markExpansionMedia(){ensureGameplayExpansion();state.weeklyStats.media++}
+function markExpansionWin(){ensureGameplayExpansion();state.weeklyStats.win++}
+ensureGameplayExpansion();if(!state.weeklyContract)resetWeeklyExpansion();render();// Connect existing actions to the weekly gameplay system.
+(function(){
+ const wrap=(name,mark)=>{const base=window[name];if(typeof base!=='function')return;window[name]=function(){const before=state.week;const result=base.apply(this,arguments);if(state.week===before)mark();return result}}
+ wrap('gameplayTrain',markExpansionTraining);
+ wrap('trainPlayerStat',markExpansionTraining);
+ wrap('gameplayAnalyze',markExpansionScout);
+ wrap('refreshScouting',markExpansionScout);
+ wrap('useFanAction',markExpansionMedia);
+ wrap('signSponsor',markExpansionMedia);
+ const matchBase=window.simulateMatch; if(typeof matchBase==='function')window.simulateMatch=function(){const before=state.wins||0;const result=matchBase.apply(this,arguments);if((state.wins||0)>before)markExpansionWin();return result};
 })();
