@@ -951,4 +951,12 @@ ensureGameplayExpansion();if(!state.weeklyContract)resetWeeklyExpansion();render
  // Always expose the launcher first; the player chooses Continue or New Game.
  const fresh=consumeFreshStart();
  setTimeout(()=>{if(fresh||document.getElementById('page'))openMainMenu()},80);
+})();// v1.0.1 follow-up: ensure the settings modal always contains a working delete button.
+(function(){
+ const previousSettingsPanel101=settingsPanel;
+ settingsPanel=function(){
+  const html=previousSettingsPanel101();
+  if(html.includes('data-delete-career'))return html;
+  return html.replace('</p></section></div>','</p><div class="settings-danger"><button class="btn danger" data-delete-career>删除当前生涯</button></div></section></div>');
+ };
 })();
