@@ -46,3 +46,18 @@ const oldSave=save;function save(){localStorage.setItem('volt-save',JSON.stringi
 const originalUpgrade=upgradeFacility;function upgradeFacility(){originalUpgrade();state.facilityLevels.青训基地=state.facility;save();render()}
 render();
 
+
+// Safe V2 gameplay extension: contracts, scouting network, rankings and map preparation.
+Object.assign(state,{contracts:state.contracts||[],scoutingLevel:state.scoutingLevel||1,mapPrep:state.mapPrep||{Ascent:50,Bind:50,Lotus:50},leagueTable:state.leagueTable||[]});
+const v2ClubBase=club,v2ScheduleBase=schedule,v2AcademyBase=academy,v2FinanceBase=finance,v2TacticsBase=tactics;
+function club(){return v2ClubBase()+`<section class="card feature-panel"><div class="card-head"><h2>合同管理</h2><span class="badge">${state.contracts.length} 份</span></div>${state.signed.map(n=>{const p=players.find(x=>x[0]===n);return `<div class="news"><b>${n}</b><small>${p?p[5]:'¥ 0'} / 年 · <button class="btn alt" onclick="extendContract('${n}')">续约</button></small></div>`}).join('')||'<p class="muted">签约选手后可管理合同。</p>'}</section>`}
+function schedule(){return v2ScheduleBase()+`<section class="card feature-panel"><div class="card-head"><h2>全球积分榜</h2><button class="btn alt" onclick="refreshRanking()">刷新榜单</button></div>${(state.leagueTable.length?state.leagueTable:[['VOLT Academy',state.rankPoints],['EDward Gaming',1280],['FNATIC',1240],['Gen.G',1190]]).map((x,i)=>`<div class="schedule-row"><small>#${i+1}</small><b>${x[0]}</b><span class="badge">${x[1]} PTS</span></div>`).join('')}</section>`}
+function academy(){return v2AcademyBase()+`<section class="card feature-panel"><div class="card-head"><h2>球探网络</h2><span class="badge">LV.${state.scoutingLevel}</span></div><p class="muted">提升球探等级，增加发现高潜选手的机会。</p><button class="btn alt" onclick="upgradeScouting()">升级球探网络 · ¥${(state.scoutingLevel*80000).toLocaleString()}</button></section>`}
+function finance(){return v2FinanceBase()+`<section class="card feature-panel"><div class="card-head"><h2>工资与合同</h2></div><div class="news"><b>当前月度工资</b><small>¥ ${state.payroll.toLocaleString()}</small></div><div class="news"><b>合同风险</b><small>${state.signed.length?'请在赛季结束前完成续约。':'暂无合同风险。'}</small></div></section>`}
+function tactics(){return v2TacticsBase()+`<section class="card feature-panel"><div class="card-head"><h2>地图准备度</h2><span class="badge">${state.mapPlan}</span></div>${Object.entries(state.mapPrep).map(([m,v])=>`<div class="news"><b>${m}</b><span class="bar"><em style="width:${v}%"></em></span><button class="btn alt" onclick="prepareMap('${m}')">训练 +10</button></div>`).join('')}</section>`}
+function prepareMap(map){if((state.actions||0)>=3){toast('本周行动次数已用完');return}state.actions++;state.mapPrep[map]=Math.min(100,state.mapPrep[map]+10);state.chemistry=Math.min(100,state.chemistry+1);save();toast(map+' 准备度提升');render()}
+function upgradeScouting(){const cost=state.scoutingLevel*80000;if(state.money<cost){toast('预算不足');return}state.money-=cost;state.scoutingLevel++;state.reputation+=50;save();toast('球探网络升级成功');render()}
+function extendContract(name){const cost=50000;if(state.money<cost){toast('预算不足');return}state.money-=cost;state.contracts.push({name,week:state.week});state.morale=Math.min(100,state.morale+3);save();toast(name+' 合同已续约');render()}
+function refreshRanking(){state.leagueTable=[['VOLT Academy',state.rankPoints],['EDward Gaming',1280+Math.floor(Math.random()*30)],['FNATIC',1240],['Gen.G',1190],['Nova Esports',1120]];state.leagueTable.sort((a,b)=>b[1]-a[1]);save();toast('全球积分榜已更新');render()}
+const oldSaveV2=save;function save(){localStorage.setItem('volt-save',JSON.stringify({...state}))}
+render();
