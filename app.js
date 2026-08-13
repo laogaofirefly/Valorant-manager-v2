@@ -1200,3 +1200,22 @@ const oldGScene=storyDashboard;storyDashboard=function(){return oldGScene()+scen
  const oldWeek=window.advanceWeek;window.advanceWeek=function(){init();oldWeek();init();const b=bonus();state.prep=Math.min(100,(state.prep||0)+Math.floor(b.training/3));state.morale=Math.min(100,(state.morale||0)+Math.floor(b.morale/4));if(state.coaching.plan==='scout'&&coach('analyst'))state.analysis=(state.analysis||0)+b.analysis;storySave();render()};
  init();
 })();
+
+// Player-coach system: any contracted player can be appointed to a coaching role.
+(function(){
+ const ROLES=[['head','主教练'],['strategist','战术教练'],['analyst','比赛分析师']];
+ function init(){
+  if(typeof ensureCoachState==='function')ensureCoachState();
+  state.coaching=state.coaching||{head:null,strategist:null,analyst:null,session:0,plan:'default'};
+  state.coaching.playerCoaches=Array.isArray(state.coaching.playerCoaches)?state.coaching.playerCoaches:[];
+  // Migrate old player coaches stored directly in a slot.
+  ROLES.forEach(([slot])=>{const c=state.coaching[slot];if(c&&c.playerId&&!state.coaching.playerCoaches.some(x=>x.playerId===c.playerId)){state.coaching.playerCoaches.push({playerId:c.playerId,slot,name:c.name,salary:c.salary||0,level:c.level||1,xp:c.xp||0,specialty:c.specialty})}});
+ }
+ function player(id){return (players||[]).find(p=>p[0]===id)}
+ function display(id){const p=player(id);return p?p[0]+' · '+p[1]:id}
+ window.addPlayerCoach=function(id,slot){init();if(!id||!slot)return toast('请选择选手和教练职位');if(!(state.signed||[]).includes(id))return toast('只有已签约选手才能担任教练');if(!ROLES.some(x=>x[0]===slot))return;if(state.coaching[slot])return toast('该教练职位已有人员');if(state.coaching.playerCoaches.some(x=>x.playerId===id))return toast('该选手已经担任教练');const p=player(id);if(!p)return;const salary=Math.max(5000,Math.round((typeof salaryOf==='function'?salaryOf(id):50000)*.7));const c={playerId:id,name:p[0],role:ROLES.find(x=>x[0]===slot)[1],salary,level:1,xp:0,specialty:null,playerCoach:true,slot};state.coaching[slot]=c;state.coaching.playerCoaches.push(c);state.coaching.playerCoaches=state.coaching.playerCoaches.filter(x=>x.playerId!==id||x.slot===slot);storySave();toast(display(id)+' 已转任'+c.role+'，仍保留在你的合同阵容中');render()};
+ window.removePlayerCoach=function(id){init();const c=state.coaching.playerCoaches.find(x=>x.playerId===id);if(!c)return;state.coaching.playerCoaches=state.coaching.playerCoaches.filter(x=>x.playerId!==id);if(state.coaching[c.slot]?.playerId===id)state.coaching[c.slot]=null;storySave();toast(display(id)+' 已退出教练岗位');render()};
+ function panel(){init();const signed=(state.signed||[]).filter(id=>!state.coaching.playerCoaches.some(c=>c.playerId===id));const current=state.coaching.playerCoaches;return `<section class="card wide player-coach-panel"><div class="card-head"><h2>选手兼任教练</h2><span class="badge">${current.length}/3 岗位</span></div><p class="muted">任何已签约选手都可以被任命为教练。任命后不会离开选手合同，可以继续参加比赛；但同一名选手不能同时担任多个教练职位。</p><div class="player-coach-add"><select id="player-coach-player"><option value="">选择已签约选手</option>${signed.map(id=>`<option value="${id}">${display(id)}</option>`).join('')}</select><select id="player-coach-role"><option value="">选择职位</option>${ROLES.filter(([slot])=>!state.coaching[slot]).map(x=>`<option value="${x[0]}">${x[1]}</option>`).join('')}</select><button class="btn alt" onclick="addPlayerCoach(document.querySelector('#player-coach-player').value,document.querySelector('#player-coach-role').value)">任命为教练</button></div>${current.map(c=>`<div class="player-coach-row"><div><b>${display(c.playerId)}</b><small>${c.role} · Lv.${c.level||1} · 仍可作为选手出场</small></div><button class="btn danger" onclick="removePlayerCoach('${c.playerId}')">解除任命</button></div>`).join('')||'<div class="empty">暂无选手兼任教练</div>'}</section>`}
+ const oldPanel=window.coachPanel;window.coachPanel=function(){return (oldPanel?oldPanel():'')+panel()};
+ init();
+})();
