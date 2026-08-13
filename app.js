@@ -93,3 +93,24 @@ eventCard=function(){return '<section class="card wide"><div class="card-head"><
 function fixtureDetail(i){const x=realFixtures[i];toast(x[3]+' · '+x[1]+' vs '+x[2]+' · '+x[4]+' · '+(x[5]==='已结束'?'最终比分 '+x[6]:'比赛尚未开始'))}
 const oldStartLive=startLiveMatch;startLiveMatch=function(){if(state.liveMatch){openLiveMatch();return}const x=realFixtures.find(v=>v[1]==='VOLT Academy'&&v[5]==='待进行')||realFixtures[2];state.currentFixture=x;oldStartLive()};
 render();
+
+// Global VCT circuit events: Masters and Champions fixtures.
+const globalFixtures=[
+ ['2025-03-01','G2 Esports','Sentinels','VCT Masters Bangkok','瑞士轮','已结束','2 : 1'],
+ ['2025-03-02','Paper Rex','FNATIC','VCT Masters Bangkok','瑞士轮','已结束','0 : 2'],
+ ['2025-03-08','Gen.G','Rex Regum Qeon','VCT Masters Bangkok','半决赛','已结束','3 : 1'],
+ ['2025-03-09','G2 Esports','FNATIC','VCT Masters Bangkok','总决赛','已结束','3 : 2'],
+ ['2025-06-17','Sentinels','Rex Regum Qeon','VCT Masters Toronto','瑞士轮','已结束','2 : 0'],
+ ['2025-06-18','FNATIC','Gen.G','VCT Masters Toronto','瑞士轮','已结束','1 : 2'],
+ ['2025-06-21','Paper Rex','Wolves Esports','VCT Masters Toronto','淘汰赛','待进行','—'],
+ ['2025-06-22','Bilibili Gaming','G2 Esports','VCT Masters Toronto','淘汰赛','待进行','—'],
+ ['2025-09-12','CN Stage 2 冠军','Pacific Stage 2 冠军','VCT Champions Paris','小组赛','待进行','—'],
+ ['2025-09-13','EMEA Stage 2 冠军','Americas Stage 2 冠军','VCT Champions Paris','小组赛','待进行','—'],
+ ['2025-09-17','全球积分排名 1','全球积分排名 8','VCT Champions Paris','淘汰赛','待进行','—'],
+ ['2025-09-20','胜者组冠军','败者组冠军','VCT Champions Paris','总决赛','待进行','—']
+];
+function globalRows(){return globalFixtures.map((x,i)=>'<div class="schedule-row fixture global-fixture '+(x[5]==='已结束'?'finished':'')+'"><small>'+x[0]+'<br><em>'+x[3]+'</em></small><b>'+x[1]+' <span class="muted">vs</span> '+x[2]+'</b><span class="badge">'+x[4]+'</span><strong>'+x[6]+'</strong><button class="btn alt" onclick="globalDetail('+i+')">'+(x[5]==='已结束'?'战报':'查看')+'</button></div>').join('')}
+const eventCardWithGlobal=eventCard;
+eventCard=function(){return eventCardWithGlobal()+('<section class="card wide global-events"><div class="card-head"><h2>全球国际赛事</h2><span class="badge">Masters · Champions</span></div><p class="muted">跨赛区国际赛事，参赛资格由各赛区阶段冠军和全球积分决定。</p>'+globalRows()+'</section>')};
+function globalDetail(i){const x=globalFixtures[i];toast(x[3]+' · '+x[1]+' vs '+x[2]+' · '+x[4]+' · '+(x[5]==='已结束'?'最终比分 '+x[6]:'尚未开赛，等待赛区晋级结果'))}
+render();
