@@ -1081,3 +1081,17 @@ const oldGScene=storyDashboard;storyDashboard=function(){return oldGScene()+scen
  function panel(){init();const b=state.challengeBoard,c=POOLS.find(x=>x.id===b.selected);const list=POOLS.slice(0,3);return `<section class="card challenge-board"><div class="card-head"><h2>本周挑战合同</h2><span class="badge">${b.selected?(b.claimed?'奖励已领取':'进行中'):'请选择一项'}</span></div><p class="muted">每周接受一份挑战合同。它会记录你接手时的状态，避免靠旧进度直接领奖。</p>${c?`<div class="challenge-active"><div><b>${c.title}</b><p>${c.desc} · 奖励 ¥${c.reward.toLocaleString()} · 声望 +${c.rep}</p></div><button class="btn alt" onclick="claimChallenge()" ${b.claimed?'disabled':''}>${b.claimed?'已领取':(c.check(state)?'领取奖励':'检查进度')}</button></div>`:`<div class="challenge-grid">${list.map(x=>`<div class="challenge-card"><b>${x.title}</b><p>${x.desc}</p><small>奖励 ¥${x.reward.toLocaleString()} · 声望 +${x.rep}</small><button class="btn alt" onclick="selectChallenge('${x.id}')">接受挑战</button></div>`).join('')}</div>`}</section>`}
  const base=storyDashboard;storyDashboard=function(){return base()+panel()};init();
 })();
+
+// Balance pass: reduce snowballing income and make weekly decisions matter.
+(function(){
+ const CHALLENGE_REWARD={win:12000,train:9000,morale:7000,scout:8000,fans:10000};
+ const oldSponsor=window.signSponsorStory;
+ if(oldSponsor)window.signSponsorStory=function(name,income,fans){const before=state.money||0;oldSponsor(name,income,fans);if((state.money||0)>before){state.money=Math.max(0,(state.money||0)-income);storySave();toast('赞助收入将在每月结算，不再提前发放');render()}};
+ const oldClaim=window.claimChallenge;
+ if(oldClaim)window.claimChallenge=function(){const before=state.money||0;oldClaim();const id=state.challengeBoard?.selected;const full={win:18000,train:14000,morale:11000,scout:12000,fans:16000}[id]||0;const target=CHALLENGE_REWARD[id]||0;if(full&&state.challengeBoard?.claimed&&target<full&&state.money>=before+full){state.money-=full-target;storySave();}};
+ const oldAdvance=window.advanceWeek;
+ window.advanceWeek=function(){oldAdvance();state.morale=Math.max(0,Math.min(100,state.morale||0));state.chemistry=Math.max(0,Math.min(100,state.chemistry||0));state.prep=Math.max(0,Math.min(100,state.prep||0));state.reputation=Math.max(0,state.reputation||0);if((state.money||0)<0){state.debt=(state.debt||0)+Math.abs(state.money);state.money=0;toast('现金流告急：已记录为俱乐部负债')}};
+ const oldMonthly=window.advanceMonth;
+ window.advanceMonth=function(){oldMonthly();if((state.money||0)<0){state.debt=(state.debt||0)+Math.abs(state.money);state.money=0}if((state.debt||0)>0){const fee=Math.min(state.debt,Math.round(state.debt*.03));state.money=Math.max(0,(state.money||0)-fee);state.debt=Math.max(0,state.debt-fee);addMessage('财务审查','俱乐部存在负债，本月偿还 ¥'+fee.toLocaleString()+'。',messageClock())}storySave()};
+ const oldStorySave=window.storySave;window.storySave=function(){if(state.money>50000000)state.money=50000000;if(state.fans>999999)state.fans=999999;if(state.reputation>5000)state.reputation=5000;oldStorySave()};
+})();
