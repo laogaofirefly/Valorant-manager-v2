@@ -946,33 +946,32 @@ ensureGameplayExpansion();if(!state.weeklyContract)resetWeeklyExpansion();render
   if(btn){e.preventDefault();e.stopPropagation();openSettings();}
  },true);
  setTimeout(refreshManagerProfile,0);
-})();// Startup rewritten: a fresh document owns the title screen; bfcache restores are reloaded once.
+})();// Startup rewritten: deliberately opt out of bfcache so every opening gets a clean document.
 (function(){
  const shell=document.querySelector('.app-shell');
  const id='volt-authoritative-start';
- let entered=false;
+ let inGame=false;
  function hasSave(){try{return !!localStorage.getItem('volt-save')}catch(e){return false}}
- function removeSave(){['volt-save','volt-save-backup'].forEach(k=>{try{localStorage.removeItem(k)}catch(e){}})}
+ function clearSaves(){for(const k of ['volt-save','volt-save-backup'])try{localStorage.removeItem(k)}catch(e){}}
  function clean(){document.getElementById(id)?.remove();document.querySelectorAll('#volt-main-menu').forEach(n=>n.remove());document.body.classList.remove('menu-open')}
- function shellOn(on){if(!shell)return;shell.hidden=!on;if(on)shell.removeAttribute('aria-hidden');else shell.setAttribute('aria-hidden','true')}
- function esc(v){return String(v??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'"'}[c]))}
- function menu(){
-  if(entered)return;
+ function setShell(visible){if(!shell)return;shell.hidden=!visible;if(visible)shell.removeAttribute('aria-hidden');else shell.setAttribute('aria-hidden','true')}
+ function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'"',"'":'&#39;'}[c]))}
+ function showMenu(){
+  if(inGame)return;
   clean();
   const saved=hasSave();
   const el=document.createElement('section');el.id=id;
   el.innerHTML=`<div class="main-menu-bg"><div class="main-menu-grid"></div></div><div class="main-menu-content"><div class="main-menu-brand"><span class="main-menu-mark">V</span><div><b>VOLT</b><small>VALORANT MANAGER</small></div></div><div class="main-menu-kicker">VCT MANAGEMENT SIMULATION · CN</div><h2>你的战队，<em>你的时代。</em></h2><p class="main-menu-lead">从一间训练室开始，组建阵容、经营俱乐部、赢下比赛，向 VCT 世界舞台发起挑战。</p><div class="main-menu-actions"><button id="volt-continue" class="main-menu-btn primary" ${saved?'':'hidden'}>继续生涯 <small>返回管理中心</small></button><button id="volt-new" class="main-menu-btn ${saved?'':'primary'}">${saved?'新建生涯':'开始游戏'}<small>${saved?'清除当前进度':'创建你的第一支战队'}</small></button><button id="volt-about" class="main-menu-btn">游戏说明<small>了解玩法与目标</small></button></div><div class="main-menu-profile">${saved?`<span>当前档案</span><b>${esc(state.clubName||'VOLT Academy')}</b><small>经理 ${esc(state.playerName||'未命名')} · ${esc(state.division||'次级联赛')} · 第 ${state.week||1} 周</small>`:'<span>新赛季即将开始</span><b>BUILD YOUR LEGACY</b><small>管理 · 训练 · 对战 · 剧情</small>'}</div><div class="main-menu-footer"><span>VOLT // 1.2.0</span><span>本地存档 · 离线可玩</span></div></div>`;
-  document.body.appendChild(el);document.body.classList.add('menu-open');shellOn(false);
-  el.querySelector('#volt-continue')?.addEventListener('click',()=>enter(false));
-  el.querySelector('#volt-new').addEventListener('click',()=>{if(saved&&!confirm('确定删除当前生涯并开始新游戏吗？'))return;removeSave();enter(true)});
+  document.body.appendChild(el);document.body.classList.add('menu-open');setShell(false);
+  el.querySelector('#volt-continue')?.addEventListener('click',()=>enterGame(false));
+  el.querySelector('#volt-new').addEventListener('click',()=>{if(saved&&!confirm('确定删除当前生涯并开始新游戏吗？'))return;clearSaves();enterGame(true)});
   el.querySelector('#volt-about').addEventListener('click',()=>{el.querySelector('.main-menu-profile').innerHTML='<span>游戏目标</span><b>从网吧赛打进 VCT CN</b><small>签约选手 · 选择剧情 · 管理资金 · 参加 BO3 对战</small>'});
  }
- function enter(fresh){entered=true;clean();shellOn(true);if(fresh){ensureStory();state.page='dashboard';state.storyFlags=state.storyFlags||{};state.storyFlags.intro=false}render();refreshManagerProfile?.()}
- window.voltShowStartPage=()=>{entered=false;menu()};
- // A cached document can contain stale DOM and stale closure state. Discard it instead of patching it.
- window.addEventListener('pageshow',e=>{if(e.persisted){location.reload();return}if(!entered)menu()});
- // Do not use visibilitychange: returning from another app must never reopen the title screen.
- menu();
+ function enterGame(fresh){inGame=true;clean();setShell(true);if(fresh){ensureStory();state.page='dashboard';state.storyFlags=state.storyFlags||{};state.storyFlags.intro=false}render();refreshManagerProfile?.()}
+ window.voltShowStartPage=()=>{inGame=false;showMenu()};
+ // unload disables browser back-forward cache. A second opening therefore always creates a new JS world.
+ window.addEventListener('unload',()=>{});
+ showMenu();
 })();
 // Match center UX upgrade: live tournament board, round timeline and readable tactical controls.
 const MATCH_TEAMS=['VOLT Academy','Nova Esports','Bilibili Gaming','EDward Gaming','Wolves Esports','DRG'];
