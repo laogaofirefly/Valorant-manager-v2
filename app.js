@@ -629,4 +629,26 @@ function markMessagesRead(){(state.messages||[]).forEach(x=>x.read=true);storySa
 function bindMessageCenter(){const notify=document.querySelector('.notify');if(notify)notify.onclick=openInbox;updateNotifyBadge()}
 const oldRenderForMessages=render;render=function(){oldRenderForMessages();bindMessageCenter()};
 // Rebind once immediately for pages rendered before this patch.
-bindMessageCenter();
+bindMessageCenter();// Message content/data fix: notifications are now event-driven instead of pre-filled with false claims.
+const INVALID_STARTUP_MESSAGE_IDS=new Set([1,2,3]);
+function ensureMessageState(){
+ state.messages=Array.isArray(state.messages)?state.messages:[];
+ // Migrate the old demo inbox. It incorrectly claimed a VCT invitation on a new save.
+ state.messages=state.messages.filter(m=>!INVALID_STARTUP_MESSAGE_IDS.has(Number(m.id)));
+ state.messageSeq=Number.isFinite(state.messageSeq)?state.messageSeq:0;
+}
+function addMessage(title,body,time){ensureMessageState();const m={id:++state.messageSeq,title,body,time:time||`第 ${state.week||1} 周`,read:false};state.messages.unshift(m);storySave();updateNotifyBadge?.();return m}
+function messageClock(){return `第 ${state.week||1} 周`}
+function resetInvalidStartupMessages(){ensureMessageState();storySave()}
+resetInvalidStartupMessages();
+// Preserve messages in every legacy save path; the old save() omitted them.
+const oldSaveWithMessages=save;
+save=function(){ensureMessageState();oldSaveWithMessages();const raw=JSON.parse(localStorage.getItem('volt-save')||'{}');raw.messages=state.messages;raw.messageSeq=state.messageSeq;localStorage.setItem('volt-save',JSON.stringify(raw))};
+// A new career starts with a truthful welcome message, not a VCT qualification notice.
+const oldBeginStoryMessages=beginStory;
+beginStory=function(name){oldBeginStoryMessages(name);if(state.storyFlags?.intro){addMessage('战队成立','你的战队已注册次级联赛，接下来需要通过比赛积累声望。',messageClock());render()}};
+// Only create a VCT invitation after the game has actually reached VCT CN.
+function notifyVctInvitation(){ensureStory();if(state.division!=='VCT CN')return;if(state.messages.some(m=>m.title==='VCT 官方邀请'))return;addMessage('VCT 官方邀请','你的战队已满足 VCT CN 参赛条件，请前往赛程页面确认参赛安排。',messageClock());render()}
+// Remove the old hard-coded VCT wording from existing saves immediately.
+if(state.messages.some(m=>m.title==='VCT 官方邀请')&&state.division!=='VCT CN'){state.messages=state.messages.filter(m=>m.title!=='VCT 官方邀请');storySave()}
+render();
