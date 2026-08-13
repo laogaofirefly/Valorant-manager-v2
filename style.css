@@ -57,3 +57,5 @@ body.menu-open{overflow:hidden}#volt-main-menu{position:fixed;inset:0;z-index:99
 .settings-danger{margin-top:18px;padding-top:14px;border-top:1px solid rgba(255,88,104,.25)}.btn.danger{color:#fff;background:rgba(255,88,104,.16);border-color:var(--red)}.btn.danger:hover{background:var(--red);color:#fff}
 .user{position:relative;min-width:0}.user .profile-copy{min-width:0;flex:1}.user .profile-copy b,.user .profile-copy small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.user .profile-settings{flex:0 0 32px;width:32px;height:32px;display:grid;place-items:center;pointer-events:auto;position:relative;z-index:2}.user{cursor:default}
 #volt-authoritative-start{position:fixed;inset:0;z-index:20000;display:grid;place-items:center;overflow:hidden;background:#080d19;color:var(--text)}#volt-authoritative-start[hidden]{display:none}#volt-authoritative-start button[hidden]{display:none}
+/* A hidden app shell must never leak through the title screen. */
+[hidden]{display:none!important}
