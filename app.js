@@ -37,7 +37,7 @@ function gameplayPanel(){const m=state.missions;return `<section class="card"><d
 function gameplayRender(){const old=render;render=function(){old();const p=document.querySelector('#page');if(p&&!p.querySelector('[data-gameplay-pack]')){const x=document.createElement('div');x.dataset.gameplayPack='1';x.innerHTML=gameplayPanel();p.appendChild(x)}};render()}
 function gameplayTrain(){if((state.actions||0)>=3){toast('本周行动次数已用完');return}state.actions++;state.chemistry=Math.min(100,state.chemistry+3);state.morale=Math.min(100,state.morale+2);state.prep=Math.min(100,state.prep+10);state.missions.training=1;gameplaySave();toast('训练完成，比赛准备度提升');render()}
 function gameplayAnalyze(){if((state.actions||0)>=3){toast('本周行动次数已用完');return}if(state.money<3000){toast('预算不足');return}state.actions++;state.money-=3000;state.prep=Math.min(100,state.prep+25);state.missions.analysis=1;state.eventsSeen++;gameplaySave();toast('对手分析完成');render()}
-const gameplayMatchBase=simulateMatch;simulateMatch=function(){const before=state.wins||0;gameplayMatchBase();if((state.wins||0)>before)state.missions.win=1;state.prep=0;gameplaySave();render()};
+const gameplayMatchBase=typeof simulateMatch==='function'?simulateMatch:null;simulateMatch=function(){if(!gameplayMatchBase){toast('比赛系统正在初始化');return}const before=state.wins||0;gameplayMatchBase();if((state.wins||0)>before)state.missions.win=1;state.prep=0;gameplaySave();render()};
 const gameplayWeekBase=advanceWeek;advanceWeek=function(){gameplayWeekBase();state.prep=0;state.missions={training:0,analysis:0,win:0};gameplaySave();render()};
 gameplayRender();
 
