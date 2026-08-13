@@ -311,3 +311,26 @@ function clubNamePanel(){
 }
 const previousStoryDashboardName=storyDashboard;
 storyDashboard=function(){return previousStoryDashboardName()+clubNamePanel()};
+// Guided first-run dashboard: make the next action obvious and move advanced settings out of the home screen.
+function openGamePage(target){state.page=target;const url=Object.keys(pathPages).find(k=>pathPages[k]===target)||'/';history.pushState({},'',BASE+(url==='/'?'/' :(url.endsWith('/')?url:url+'/')));render()}
+function guidedStep(){
+ ensureStory();
+ if(!state.storyFlags.intro)return {number:1,title:'创建你的战队',desc:'输入经理姓名，签下 5 名初始选手，从城市公开赛开始。',button:'开始剧情',action:null};
+ if((state.signed||[]).length<5)return {number:1,title:'补齐首发阵容',desc:'前往选手市场，确保阵容达到 5 人后才能参加正式比赛。',button:'查看选手市场',action:"openGamePage('roster')"};
+ if((state.actions||0)>0)return {number:2,title:'完成本周准备',desc:'先安排训练或录像复盘，再进入下一场联赛比赛。',button:'进入训练中心',action:"openGamePage('tactics')"};
+ ensureLowerLeagues();
+ if((state.leagueSeason?.played||0)<8)return {number:3,title:'参加下一场比赛',desc:`当前是${currentLeague().name}，完成本赛季 8 场比赛并争取 60% 胜率。`,button:'查看赛程',action:"openGamePage('schedule')"};
+ if(state.leagueIndex<LOWER_LEAGUES.length-1)return {number:4,title:'检查晋级资格',desc:'本赛季比赛已完成，查看战绩并申请晋级。',button:'查看晋级',action:"openGamePage('schedule')"};
+ return {number:4,title:'继续挑战 VCT',desc:'你的俱乐部已经进入最高级别，继续完成赛事和经营目标。',button:'查看赛事',action:"openGamePage('schedule')"};
+}
+function guidedDashboard(){
+ ensureStory();
+ if(!state.storyFlags.intro)return storyIntro();
+ ensureLowerLeagues();
+ const step=guidedStep(), f=monthlyFinance(), league=currentLeague(), played=state.leagueSeason?.played||0,wins=state.leagueSeason?.wins||0;
+ return `<div class="hero guide-hero"><div><span class="eyebrow">${state.clubName||'你的战队'} · 第 ${state.week||1} 周</span><h2>今天要做什么？</h2><p>按照下方步骤经营战队，不需要一次理解所有系统。</p></div><button class="btn" onclick="advanceWeek()">推进一周</button></div><section class="card guide-next"><div class="guide-next-label">下一步行动</div><div class="guide-next-main"><div class="guide-number">${step.number}</div><div><h2>${step.title}</h2><p>${step.desc}</p></div><button class="btn" onclick="${step.action||"document.querySelector('#player-name')?.focus()"}">${step.button}</button></div></section><div class="guide-flow"><div class="guide-flow-title">你的赛季路线</div><div class="guide-flow-steps"><div class="done">① 组建战队</div><div class="${played>0?'done':''}">② 训练准备</div><div class="${played>=8?'done':''}">③ 参加 ${league.name}</div><div class="${state.leagueIndex>=3?'done':''}">④ 晋级 VCT CN</div></div></div><div class="grid stats guide-stats"><div class="card"><span class="stat-label">运营资金</span><div class="stat-value">¥${(state.money||0).toLocaleString()}</div><small>月净变化 ¥${f.net.toLocaleString()}</small></div><div class="card"><span class="stat-label">当前联赛</span><div class="stat-value guide-small-value">${league.name}</div><small>${played} / 8 场 · ${wins} 胜</small></div><div class="card"><span class="stat-label">首发阵容</span><div class="stat-value">${(state.signed||[]).length} / 5</div><small>完整阵容才能参赛</small></div><div class="card"><span class="stat-label">本周行动点</span><div class="stat-value">${state.actions||0} / 3</div><small>训练、复盘或球探</small></div></div><section class="card guide-help"><div class="card-head"><h2>其他管理</h2><span class="muted">准备好后再使用</span></div><div class="guide-links"><button onclick="openGamePage('club')">我的战队</button><button onclick="openGamePage('academy')">二队与青训</button><button onclick="openGamePage('finance')">财务与赞助</button><button onclick="openGamePage('schedule')">完整赛事</button></div></section>`;
+}
+const oldGuidedDashboard=storyDashboard;storyDashboard=guidedDashboard;
+const oldClubWithName=club;club=function(){return oldClubWithName()+clubNamePanel()};
+const oldFinanceWithSave=finance;finance=function(){return oldFinanceWithSave()+saveStatusPanel()};
+render();
