@@ -46,3 +46,17 @@ const oldSave=save;function save(){localStorage.setItem('volt-save',JSON.stringi
 const originalUpgrade=upgradeFacility;function upgradeFacility(){originalUpgrade();state.facilityLevels.青训基地=state.facility;save();render()}
 render();
 
+// Safe V2-native feature extension: transfer negotiations, map veto and ranking board.
+Object.assign(state,{transferOffers:state.transferOffers||[],mapVeto:state.mapVeto||[],rankingBoard:state.rankingBoard||[],negotiations:state.negotiations||0});
+const voltBaseRoster=roster;
+const voltBaseSchedule2=schedule;
+const voltBaseClub2=club;
+function roster(){return voltBaseRoster()+`<section class="card feature-panel"><div class="card-head"><h2>转会谈判</h2><button class="btn alt" onclick="generateOffer()">刷新市场</button></div>${state.transferOffers.map((p,i)=>`<div class="news"><b>${p.name} · ${p.role}</b><small>${p.team} · ${p.region} · 要价 ¥${p.fee.toLocaleString()} <button class="btn alt" onclick="negotiateOffer(${i})">洽谈</button></small></div>`).join('')||'<p class="muted">点击刷新市场生成可谈判选手。</p>'}</section>`}
+function schedule(){return voltBaseSchedule2()+`<section class="card feature-panel"><div class="card-head"><h2>赛前地图准备</h2><span class="badge">${state.mapVeto.length}/3</span></div><div class="news"><button class="btn alt" onclick="toggleMap('Ascent')">Ascent</button> <button class="btn alt" onclick="toggleMap('Haven')">Haven</button> <button class="btn alt" onclick="toggleMap('Lotus')">Lotus</button> <button class="btn alt" onclick="toggleMap('Sunset')">Sunset</button></div><p class="muted">选择最多三张地图，影响下一场比赛准备度。</p><small>${state.mapVeto.join(' · ')||'尚未选择地图'}</small></section>`}
+function club(){return voltBaseClub2()+`<section class="card feature-panel"><div class="card-head"><h2>全球排名</h2><button class="btn alt" onclick="refreshRanking()">更新榜单</button></div>${state.rankingBoard.map((x,i)=>`<div class="schedule-row"><small>#${i+1}</small><b>${x.name}</b><span class="badge">${x.rating}</span><small>${x.region}</small></div>`).join('')||'<p class="muted">点击更新榜单。</p>'}</section>`}
+function generateOffer(){const pool=players.filter(p=>!state.signed.includes(p[0]));state.transferOffers=pool.sort(()=>Math.random()-.5).slice(0,4).map(p=>({name:p[0],role:p[2],team:p[3],region:p[4],fee:Math.max(20000,parseInt(p[5].replace(/[^0-9]/g,''))*1000/4)}));save();render()}
+function negotiateOffer(i){const p=state.transferOffers[i];if(!p)return;if(state.money<p.fee){toast('预算不足，无法完成谈判');return}state.money-=p.fee;state.signed.push(p.name);state.chemistry=Math.min(100,state.chemistry+3);state.reputation+=20;state.negotiations++;state.transferOffers.splice(i,1);toast(p.name+' 已签约加入 VOLT');save();render()}
+function toggleMap(map){const i=state.mapVeto.indexOf(map);if(i>=0)state.mapVeto.splice(i,1);else if(state.mapVeto.length<3)state.mapVeto.push(map);else return toast('最多选择三张地图');state.chemistry=Math.min(100,state.chemistry+1);save();render()}
+function refreshRanking(){const teams=[['VOLT Academy','CN'],['EDward Gaming','CN'],['FNATIC','EMEA'],['Paper Rex','Pacific'],['G2 Esports','Americas'],['Gen.G','Pacific']];state.rankingBoard=teams.map((x,i)=>({name:x[0],region:x[1],rating:Math.max(1,92-i*6+Math.floor((state.teamRating-62)/2))})).sort((a,b)=>b.rating-a.rating);save();render()}
+const voltSaveBeforeNext=save;function save(){const data={...state};localStorage.setItem('volt-save',JSON.stringify(data))}
+render();
