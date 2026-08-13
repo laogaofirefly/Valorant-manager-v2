@@ -1134,3 +1134,18 @@ const oldGScene=storyDashboard;storyDashboard=function(){return oldGScene()+scen
  if(oldStart)window.startLiveMatch=function(){init();if(state.startingLineup.length<5)return toast('请先配置完整的 5 人首发阵容');return oldStart()};
  init();
 })();
+
+// Scrim system: low-stakes practice matches create meaningful weekly choices.
+(function(){
+ const OPPONENTS=[
+  {id:'academy',name:'本地青训队',cost:3000,diff:58,prep:8,chem:3,fans:15,rep:1},
+  {id:'challenger',name:'挑战者联赛战队',cost:7000,diff:72,prep:12,chem:5,fans:35,rep:3},
+  {id:'vct',name:'VCT 陪练队',cost:14000,diff:84,prep:16,chem:7,fans:65,rep:6}
+ ];
+ function init(){state.scrim=state.scrim||{week:0,done:false,history:[]};if(state.scrim.week!==state.week){state.scrim.week=state.week;state.scrim.done=false}}
+ function rating(){const base=typeof vctTeamRating==='function'?vctTeamRating():60;return Math.min(100,base+(state.prep||0)*.12+(state.chemistry||0)*.08+(state.morale||0)*.04)}
+ window.runScrim=function(id,style){init();if(state.scrim.done)return toast('本周训练赛已经完成');const o=OPPONENTS.find(x=>x.id===id);if(!o)return;if((state.signed||[]).length<5)return toast('需要完整的五人首发才能进行训练赛');if((state.actions||0)<1)return toast('本周行动点不足');if((state.money||0)<o.cost)return toast('训练赛预算不足，需要 ¥'+o.cost.toLocaleString());state.actions--;state.money-=o.cost;const styleBonus={default:0,aggressive:3,slow:2,anti:5}[style]||0;const chance=Math.max(.18,Math.min(.88,.5+(rating()+styleBonus-o.diff)*.025));const win=Math.random()<chance;state.prep=Math.min(100,(state.prep||0)+o.prep);state.chemistry=Math.min(100,(state.chemistry||0)+o.chem);state.fans=(state.fans||0)+(win?o.fans:Math.round(o.fans*.35));state.reputation=Math.max(0,(state.reputation||0)+(win?o.rep:0));state.scrim.done=true;state.scrim.last={opponent:o.name,win,style,week:state.week};state.scrim.history.unshift({week:state.week,opponent:o.name,win,score:win?'13:9':'8:13'});state.scrim.history=state.scrim.history.slice(0,6);addMessage('训练赛结果',`${o.name} · ${win?'训练赛获胜':'训练赛失利'}，准备度 +${o.prep}，化学反应 +${o.chem}${win?'，粉丝与声望有所提升。':'。'}`,messageClock());storySave();toast(win?'训练赛获胜，团队状态提升':'训练赛失利，但获得了宝贵经验');render()};
+ function panel(){init();const last=state.scrim.last;return `<section class="card wide scrim-panel"><div class="card-head"><h2>训练赛中心</h2><span class="badge">${state.scrim.done?'本周已完成':'本周可进行 1 场'}</span></div><p class="muted">训练赛不计入正式战绩，但会消耗行动点和预算。对手越强，准备度与成长收益越高。</p>${last&&last.week===state.week?`<div class="scrim-result"><b>${last.opponent}：${last.win?'获胜':'失利'}</b><span>战术：${{default:'默认控图',aggressive:'快速进攻',slow:'慢打运营',anti:'针对性反制'}[last.style]||'默认控图'}</span></div>`:''}<div class="scrim-grid">${OPPONENTS.map(o=>`<div class="scrim-card"><b>${o.name}</b><small>难度 ${o.diff} · 费用 ¥${o.cost.toLocaleString()}</small><small>胜利收益：准备度 +${o.prep} · 化学反应 +${o.chem}</small><div class="scrim-buttons"><button class="btn alt" onclick="runScrim('${o.id}','default')" ${state.scrim.done?'disabled':''}>默认控图</button><button class="btn alt" onclick="runScrim('${o.id}','anti')" ${state.scrim.done?'disabled':''}>针对性反制</button></div></div>`).join('')}</div></section>`}
+ const oldDashboard=dashboard;dashboard=function(){return oldDashboard()+panel()};
+ init();
+})();
