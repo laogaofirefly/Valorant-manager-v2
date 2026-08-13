@@ -11,3 +11,4 @@
 .global-fixture{border-left:2px solid #ffb848}
 .global-fixture em{color:#ffcf78}
 .event-meta{display:flex;gap:12px;flex-wrap:wrap;margin:10px 0 16px;color:#9aa6b8;font-size:12px}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:12px 0}.grid-3>div,.sponsor-list>div{padding:14px;background:#101821;border:1px solid #263746;border-radius:8px}.facility-mini{display:flex;gap:12px;flex-wrap:wrap;margin-top:14px}.facility-mini>span{padding:10px 12px;background:#111c26;border-radius:6px}.sponsor-list{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.sponsor-list small{display:block;color:#9aa6b8;margin:8px 0}@media(max-width:700px){.grid-3,.sponsor-list{grid-template-columns:1fr}}
