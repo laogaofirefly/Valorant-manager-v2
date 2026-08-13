@@ -450,4 +450,21 @@ const oldCompetitionProgression=competitionInfo;
 competitionInfo=function(){ensureLowerLeagues();const l=currentLeague();const intro=l.index===0?'从网吧包间打出名气，寻找第一批可靠的选手。':l.index===1?'在地区赛场建立战队品牌，争取进入 Challengers CN。':l.index===2?'这里开始使用真实的 Challengers CN 队伍与职业选手。':'最高级别赛场：对手、选手与赛事队伍均来自真实 VCT CN 体系。';return `<section class="card wide progression-card"><div class="card-head"><h2>${l.name}</h2><span class="badge">阶段 ${state.leagueIndex+1}/4</span></div><p>${intro}</p><div class="event-meta"><span>赛制：${l.format}</span><span>参赛队：${l.teams} 队</span><span>${l.authentic?'真实赛事与真实职业选手':'虚构赛事、队伍与选手'}</span><span>赛季：${state.leagueSeason.played}/8 场</span></div></section>`}
 const oldGuidedProgression=guidedDashboard;
 guidedDashboard=function(){return oldGuidedProgression().replace('从城市公开赛开始','从网吧赛开始').replace('城市公开赛','网吧赛')};
-render();
+render();// Curated fictional grassroots identities: believable handles, names and team affiliations.
+const FICTIONAL_IDENTITY_MAP={
+ voltA:['Morrow','林砚舟','Duelist','VOLT Academy'],voltB:['Kestrel','周予安','Initiator','VOLT Academy'],voltC:['Serein','沈知行','Controller','VOLT Academy'],voltD:['North','顾临川','Sentinel','VOLT Academy'],voltE:['Aster','许闻洲','Flex','VOLT Academy'],
+ netR:['Netrise','陈昱衡','Duelist','Night Shift'],Mika:['Mikao','林米可','Initiator','Pixel Forge'],Kite:['Kitefall','高启明','Controller','Blue Screen'],Rook:['Rooke','叶骁然','Sentinel','Lantern Five'],Bamboo:['Bamby','赵青禾','Flex','Metro Wolves'],ZeroDay:['Zeroday','苏亦辰','Duelist','AfterSchool'],Echo:['Echo7','唐叙','Initiator','Redline Club'],Moss:['Mossy','吴默言','Controller','South Gate'],Nana:['NanaQ','何宁','Sentinel','Paper Cup'],Byte:['Bytee','李柏舟','Flex','Night Shift'],Kuro:['Kuroki','周墨','Duelist','Pixel Forge'],Lumi:['Lumina','蒋露遥','Initiator','Blue Screen']
+};
+Object.entries(FICTIONAL_IDENTITY_MAP).forEach(([id,v])=>{players.filter(p=>p[0]===id&&isFictionalPlayer(p)).forEach(p=>{p[0]=v[0];p[1]=v[1];p[2]=v[2];p[3]=v[3];p[6]='fictional'})});
+// Give the old anonymous prospect rows unique identities instead of duplicate placeholder IDs.
+const prospectIdentities=[['Harbor','韩澈','Initiator','Harborline'],['Vanta','陆闻','Controller','Vanta Club'],['Sola','程曦','Flex','Solstice'],['Riven','孟川','Duelist','Rift House']];
+let prospectIndex=0;players.forEach(p=>{if((p[0]==='something'||String(p[1]).includes('prospect'))&&p[3]==='Free Agent'){const v=prospectIdentities[prospectIndex++%prospectIdentities.length];p[0]=v[0];p[1]=v[1];p[2]=v[2];p[3]=v[3];p[6]='fictional'}});
+// Existing saves may contain the former temporary IDs; migrate them once.
+const fictionalIdMigration={netR:'Netrise',Mika:'Mikao',Kite:'Kitefall',Rook:'Rooke',Bamboo:'Bamby',ZeroDay:'Zeroday',Echo:'Echo7',Moss:'Mossy',Nana:'NanaQ',Byte:'Bytee',Kuro:'Kuroki',Lumi:'Lumina',voltA:'Morrow',voltB:'Kestrel',voltC:'Serein',voltD:'North',voltE:'Aster'};
+if(state.signed)state.signed=state.signed.map(id=>fictionalIdMigration[id]||id);
+if(state.contracts){Object.entries(fictionalIdMigration).forEach(([oldId,newId])=>{if(state.contracts[oldId]&&!state.contracts[newId]){state.contracts[newId]=state.contracts[oldId];delete state.contracts[oldId]}})}
+if(state.playerRatings){Object.entries(fictionalIdMigration).forEach(([oldId,newId])=>{if(state.playerRatings[oldId]!==undefined&&state.playerRatings[newId]===undefined){state.playerRatings[newId]=state.playerRatings[oldId];delete state.playerRatings[oldId]}})}
+function fictionalMarketDescription(){return '网吧赛与地区小型赛选手均为虚构角色，姓名、ID、队伍和履历均为本游戏原创设定。'}
+const oldRosterIdentity=roster;
+roster=function(){return oldRosterIdentity().replace('综合评分、合同价格与现实竞技水平挂钩；高水平选手身价更高。',''+fictionalMarketDescription()+' 评分和身价随赛事级别逐步提升。')};
+storySave();render();
