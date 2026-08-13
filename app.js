@@ -549,3 +549,15 @@ advanceWeek=function(){
 };
 const previousGuidedDashboardForIncidents=guidedDashboard;
 guidedDashboard=function(){const html=previousGuidedDashboardForIncidents();return html.replace('<div class="guide-flow">',randomIncidentPanel()+'<div class="guide-flow">')};
+// Dynamic manager profile and functional settings panel.
+function managerDisplayName(){ensureStory();return (state.playerName||'').trim()||'未命名经理'}
+function managerAvatar(){return managerDisplayName().slice(0,1).toUpperCase()}
+function settingsPanel(){ensureStory();return `<div class="settings-overlay" id="settings-overlay" onclick="if(event.target.id==='settings-overlay')closeSettings()"><section class="settings-modal card"><div class="card-head"><h2>设置</h2><button class="icon-btn" onclick="closeSettings()">×</button></div><label>经理名称<input id="settings-manager-name" maxlength="20" value="${managerDisplayName().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\"/g,'"')}"></label><label>战队名称<input id="settings-club-name" maxlength="24" value="${(state.clubName||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\"/g,'"')}"></label><div class="settings-actions"><button class="btn alt" onclick="closeSettings()">取消</button><button class="btn" onclick="saveSettingsProfile()">保存设置</button></div><p class="muted">设置会保存到当前浏览器的本地存档。</p></section></div>`}
+function openSettings(){ensureStory();if(!document.getElementById('settings-overlay'))document.body.insertAdjacentHTML('beforeend',settingsPanel());document.getElementById('settings-overlay').classList.add('show')}
+function closeSettings(){document.getElementById('settings-overlay')?.remove()}
+function saveSettingsProfile(){ensureStory();const n=(document.getElementById('settings-manager-name')?.value||'').trim(),c=(document.getElementById('settings-club-name')?.value||'').trim();if(n.length<1)return toast('经理名称不能为空');if(n.length>20)return toast('经理名称最多 20 个字符');if(c.length<2)return toast('战队名称至少需要 2 个字符');if(c.length>24)return toast('战队名称最多 24 个字符');state.playerName=n;state.clubName=c;storySave();closeSettings();render();toast('设置已保存')}
+const previousProfileRender=render;
+render=function(){previousProfileRender();const name=managerDisplayName();const user=document.querySelector('.user');if(user){user.innerHTML=`<div class="avatar">${managerAvatar()}</div><div><b>经理 ${name}</b><small>${state.division||'新秀经理'}</small></div><button class="profile-settings" aria-label="打开设置" onclick="openSettings()">⚙</button>`;user.querySelector('.profile-settings').onclick=openSettings}}
+if(document.querySelector('.user')){document.querySelector('.user').onclick=openSettings}
+const originalBodyRender=render;render=function(){originalBodyRender();const u=document.querySelector('.user');if(u)u.onclick=null};
+render();
