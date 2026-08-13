@@ -1249,3 +1249,20 @@ const oldGScene=storyDashboard;storyDashboard=function(){return oldGScene()+scen
  const oldRenderHonor=render;render=function(){if(state.page==='honor'){ensureHonor();page.innerHTML=honor();document.querySelector('#page-title').textContent='荣誉殿堂';document.querySelector('#page-domain').textContent='honor.volt.gg · WEEK '+(state.week||1);nav();return}oldRenderHonor();nav()};pathPages['/honor']='honor';pageTitle.honor='荣誉殿堂';pageDomains.honor='honor.volt.gg';ensureHonor();
  const oldFinishHonor=finishLiveMatch;finishLiveMatch=function(){const m=state.liveMatch,lower=state.lowerMatch===true,inter=state.internationalMatch===true;oldFinishHonor();if(m){const w=m.seriesV>m.seriesO;addHonor({event:inter?'VCT 国际赛':lower?honorEvent():'VCT CN 常规赛',rank:w?'胜利':'失利',result:w?'胜利':'失利',score:m.seriesV+' : '+m.seriesO,note:w?'完成系列赛胜利':'完成系列赛'});state.internationalMatch=false;state.lowerMatch=false;storySave()}};
 })();
+// Realistic tournament format metadata and stage display.
+(function(){
+const FORMAT_RULES={
+'网吧赛':{format:'小组赛 + 单败淘汰',stages:[['小组赛','4组×4队，BO1单循环；每组前2晋级'],['季后赛','8强单败淘汰BO3；决赛BO3']]},
+'地区小型赛':{format:'瑞士轮 + 单败淘汰',stages:[['瑞士轮','8队BO3；3胜晋级，3负淘汰'],['季后赛','4强单败淘汰BO3；决赛BO5']]},
+'全国大赛':{format:'小组赛 + 双败淘汰',stages:[['小组赛','2组×8队，BO3单循环；每组前4晋级'],['淘汰赛','8强双败淘汰BO3；总决赛BO5']]},
+'Challengers CN':{format:'常规赛 + 双败淘汰季后赛',stages:[['常规赛','10队双循环BO3；胜者3分'],['季后赛','前6双败淘汰；总决赛BO5']]},
+'VCT CN':{format:'常规赛 + 双败淘汰',stages:[['常规赛','分组BO3；积分决定季后赛种子'],['季后赛','前4/6双败淘汰；总决赛BO5']]},
+'VCT 国际赛':{format:'瑞士轮 + 双败淘汰',stages:[['瑞士轮','12队BO3；2胜晋级，2负淘汰'],['淘汰赛','双败淘汰BO3；总决赛BO5']]},
+'Masters / Champions':{format:'小组/瑞士轮 + 双败淘汰',stages:[['小组赛/瑞士轮','BO3，按赛事公告决定晋级线'],['淘汰赛','双败淘汰BO3；总决赛BO5']]}}
+function formatRule(){ensureLowerLeagues();return FORMAT_RULES[currentLeague()?.name]||FORMAT_RULES['VCT CN']}
+function stageName(){const r=formatRule(),p=state.leagueSeason?.played||0;return r.stages[Math.min(r.stages.length-1,Math.floor(p/4))][0]}
+window.competitionFormatPanel=function(){const r=formatRule(),st=stageName();return `<section class="card wide format-panel"><div class="card-head"><div><span class="eyebrow">OFFICIAL-STYLE FORMAT</span><h2>${currentLeague().name} · ${r.format}</h2></div><span class="badge">当前阶段：${st}</span></div><div class="format-stage-list">${r.stages.map((x,i)=>`<div class="format-stage ${x[0]===st?'active':''}"><strong>${i+1}</strong><div><b>${x[0]}</b><small>${x[1]}</small></div></div>`).join('')}</div><p class="muted">BO1、BO3、BO5代表单场系列赛地图数量；小组赛、瑞士轮和淘汰赛分别决定晋级、淘汰和最终名次。</p></section>`}
+const oldScheduleFormat=schedule;schedule=function(){return oldScheduleFormat()+competitionFormatPanel()};
+const oldStartLowerFormat=startLowerMatch;startLowerMatch=function(){state.currentCompetitionStage=stageName();return oldStartLowerFormat()};
+const oldFinishFormat=finishLiveMatch;finishLiveMatch=function(){const m=state.liveMatch;if(m)m.competitionStage=state.currentCompetitionStage||stageName();oldFinishFormat()};
+})();
