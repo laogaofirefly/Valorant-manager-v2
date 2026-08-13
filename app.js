@@ -333,4 +333,32 @@ function guidedDashboard(){
 const oldGuidedDashboard=storyDashboard;storyDashboard=guidedDashboard;
 const oldClubWithName=club;club=function(){return oldClubWithName()+clubNamePanel()};
 const oldFinanceWithSave=finance;finance=function(){return oldFinanceWithSave()+saveStatusPanel()};
-render();
+render();// Weekly objectives give the manager a clear short-term goal and meaningful feedback.
+function ensureWeeklyObjective(){
+ ensureStory();
+ if(state.weeklyObjective&&state.weeklyObjective.week!==state.week){state.weeklyObjective=null}
+}
+function chooseWeeklyObjective(type){
+ ensureWeeklyObjective();
+ if(state.weeklyObjective)return toast('本周目标已经选择');
+ const base={week:state.week,type,target:1,reward:0,startTraining:state.training?.sessions||0,startMatches:state.leagueSeason?.played||0,startPrep:state.prep||0};
+ if(type==='training'){base.title='完成一次训练';base.desc='安排全队或个人专项训练，提升选手能力。';base.reward=12000}
+ if(type==='match'){base.title='完成一场联赛比赛';base.desc='完成赛前准备并打完当前联赛的下一场比赛。';base.reward=18000}
+ if(type==='prep'){base.title='做好赛前准备';base.desc='通过训练、录像复盘或战术准备，把准备度提升 20 点。';base.target=20;base.reward=15000}
+ state.weeklyObjective=base;storySave();toast('本周目标已确定：'+base.title);render()
+}
+function weeklyObjectiveProgress(){
+ ensureWeeklyObjective();const o=state.weeklyObjective;if(!o)return {value:0,target:1,done:false};let value=0;
+ if(o.type==='training')value=Math.max(0,(state.training?.sessions||0)-(o.startTraining||0));
+ if(o.type==='match')value=Math.max(0,(state.leagueSeason?.played||0)-(o.startMatches||0));
+ if(o.type==='prep')value=Math.max(0,(state.prep||0)-(o.startPrep||0));
+ return {value:Math.min(o.target,value),target:o.target,done:value>=o.target}
+}
+function claimWeeklyObjective(){const o=state.weeklyObjective,p=weeklyObjectiveProgress();if(!o||!p.done)return toast('目标还没有完成');if(o.claimed)return toast('本周目标奖励已领取');o.claimed=true;state.money=(state.money||0)+o.reward;state.reputation=(state.reputation||0)+15;state.log=state.log||[];state.log.unshift('完成本周目标：'+o.title);storySave();toast('目标完成！获得 ¥'+o.reward.toLocaleString()+' 和声望 +15');render()}
+function weeklyObjectivePanel(){
+ ensureWeeklyObjective();const o=state.weeklyObjective;
+ if(!o)return `<section class="card weekly-objective"><div class="card-head"><h2>本周目标</h2><span class="badge">选择一个</span></div><p class="muted">每周只需要完成一个短目标。选择最适合当前计划的目标，完成后领取奖励。</p><div class="objective-choices"><button onclick="chooseWeeklyObjective('training')"><b>训练成长</b><small>完成 1 次训练 · 奖励 ¥12,000</small></button><button onclick="chooseWeeklyObjective('match')"><b>赢下一场流程</b><small>完成 1 场联赛 · 奖励 ¥18,000</small></button><button onclick="chooseWeeklyObjective('prep')"><b>赛前准备</b><small>准备度 +20 · 奖励 ¥15,000</small></button></div></section>`;
+ const p=weeklyObjectiveProgress(),percent=Math.round(p.value/p.target*100);return `<section class="card weekly-objective"><div class="card-head"><h2>本周目标</h2><span class="badge">${o.claimed?'已领取':'进行中'}</span></div><div class="objective-current"><div><b>${o.title}</b><small>${o.desc}</small></div><strong>${p.value} / ${p.target}${o.type==='prep'?' 点':''}</strong></div><div class="bar objective-bar"><em style="width:${percent}%"></em></div>${p.done&&!o.claimed?`<button class="btn" onclick="claimWeeklyObjective()">领取 ¥${o.reward.toLocaleString()} + 声望</button>`:'<small class="muted">'+(o.claimed?'本周奖励已领取，下周会刷新新目标。':'完成目标后可以领取奖励。')+'</small>'}</section>`
+}
+const previousGuidedDashboardObjectives=guidedDashboard;
+guidedDashboard=function(){const html=previousGuidedDashboardObjectives();return html.replace('<div class="guide-flow">',weeklyObjectivePanel()+'<div class="guide-flow">')};
