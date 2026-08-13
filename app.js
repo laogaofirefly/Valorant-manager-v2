@@ -895,4 +895,9 @@ ensureGameplayExpansion();if(!state.weeklyContract)resetWeeklyExpansion();render
    render();
   }
  },80);
+})();// Immersive story presentation: cinematic opening scene and atmospheric campaign cards.
+(function(){
+ const originalStoryIntro=storyIntro;
+ storyIntro=function(){ensureStory();if(state.storyFlags.intro)return '';return `<section class="story-cinematic"><div class="story-noise"></div><div class="story-scanline"></div><div class="story-visual"><div class="story-orbit orbit-a"></div><div class="story-orbit orbit-b"></div><div class="story-city"><i></i><i></i><i></i><i></i><i></i></div><div class="story-crosshair">+</div><div class="story-live"><span></span> LIVE / 23:47:16</div></div><div class="story-cinematic-copy"><span class="eyebrow">VOLT // ORIGIN FILE 001</span><div class="story-chapter">序章 · 无名之队</div><h2>每一支强队，<br><em>都曾从黑暗中开始。</em></h2><p class="story-narrative">城市的霓虹在训练室窗外闪烁。没有赞助，没有排名，也没有人相信你们能走多远。只有五名年轻选手、一间租来的房间，以及一个不肯熄灭的梦想。</p><div class="story-objective"><span>当前任务</span><b>建立你的第一支战队</b><small>输入经理姓名，开启 VCT CN 之路</small></div><div class="story-entry"><label for="player-name">经理代号</label><div><input id="player-name" class="search" maxlength="20" autocomplete="off" placeholder="输入你的名字"><button class="btn story-start" onclick="beginStory(document.querySelector('#player-name').value)">进入故事 <b>→</b></button></div><small>你的名字将出现在战队公告、赛事记录与剧情消息中。</small></div><div class="story-route"><span>次级联赛</span><i>→</i><span>挑战者联赛</span><i>→</i><strong>VCT CN</strong></div></div><div class="story-cinematic-footer"><span>THE UNDERDOG PROJECT</span><span>PRESS ENTER TO BEGIN</span></div></section>`};
+ document.addEventListener('keydown',e=>{if(e.key==='Enter'&&document.getElementById('player-name')&&document.activeElement?.id==='player-name')beginStory(document.getElementById('player-name').value)});
 })();
