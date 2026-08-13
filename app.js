@@ -40,3 +40,7 @@ function gameplayAnalyze(){if((state.actions||0)>=3){toast('本周行动次数�
 const gameplayMatchBase=simulateMatch;simulateMatch=function(){const before=state.wins||0;gameplayMatchBase();if((state.wins||0)>before)state.missions.win=1;state.prep=0;gameplaySave();render()};
 const gameplayWeekBase=advanceWeek;advanceWeek=function(){gameplayWeekBase();state.prep=0;state.missions={training:0,analysis:0,win:0};gameplaySave();render()};
 gameplayRender();
+
+// Team visibility: show a real starting five in the management view.
+if(!state.signed.length){state.signed=['nobody','Autumn','Lysoar','Kai','Viva'];gameplaySave()}
+const teamVisibleRender=render;render=function(){teamVisibleRender();const p=document.querySelector('#page');if(!p||p.querySelector('[data-team-visible]'))return;const names=state.signed.slice(0,5);const box=document.createElement('section');box.className='card';box.dataset.teamVisible='1';box.innerHTML='<div class="card-head"><h2>我的战队 · VOLT Academy</h2><span class="badge">'+names.length+'/5 首发</span></div>'+names.map((n,i)=>{const x=players.find(v=>v[0]===n);return '<div class="tactic"><div><b>'+(i+1)+'. '+n+'</b><small>'+(x?x[1]+' · '+x[2]:'已注册选手')+'</small></div><span class="trend">首发</span></div>'}).join('')+'<button class="btn alt" onclick="goRoster()">管理阵容</button>';p.prepend(box)};render();
