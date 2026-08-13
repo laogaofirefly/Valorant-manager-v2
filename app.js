@@ -928,8 +928,8 @@ ensureGameplayExpansion();if(!state.weeklyContract)resetWeeklyExpansion();render
  if(typeof ensureTasks==="function")ensureTasks();
 })();// VOLT 1.0 polish: release badge, safe local saves, shortcuts, and a compact changelog panel.
 (function(){
- const VERSION='1.0.0';
- function releasePanel(){return `<section class="card wide release-panel"><div><span class="eyebrow">VOLT // RELEASE CHANNEL</span><h2>VOLT Manager <em>1.0</em></h2><p>首个完整可玩的战队经营版本。组建阵容、完成任务、赢下比赛，向 VCT CN 进发。</p></div><div class="release-meta"><b>v${VERSION}</b><small>稳定版 · 本地存档</small><small>最后更新：2025 赛季</small></div></section>`}
+ const VERSION='1.0.2';
+ function releasePanel(){return `<section class="card wide release-panel"><div><span class="eyebrow">VOLT // RELEASE CHANNEL</span><h2>VOLT Manager <em>1.0.2</em></h2><p>修复启动界面与赛程导航问题，完善 1.0.2 稳定版。组建阵容、完成任务、赢下比赛，向 VCT CN 进发。</p></div><div class="release-meta"><b>v${VERSION}</b><small>稳定版 · 本地存档</small><small>最后更新：2025 赛季</small></div></section>`}
  function safeSave(){try{const raw=localStorage.getItem('volt-save');if(raw){const parsed=JSON.parse(raw);localStorage.setItem('volt-save-backup',JSON.stringify(parsed))}}catch(e){console.warn('backup failed',e)}}
  const oldStorySave10=storySave;storySave=function(){oldStorySave10();safeSave()};
  const oldSave10=save;save=function(){oldSave10();safeSave()};
