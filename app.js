@@ -866,4 +866,33 @@ ensureGameplayExpansion();if(!state.weeklyContract)resetWeeklyExpansion();render
  window.showMainAbout=function(){const p=document.querySelector('#volt-main-menu .main-menu-profile');if(!p)return;p.innerHTML='<span>游戏目标</span><b>从网吧赛打进 VCT CN</b><small>签约选手 · 选择剧情 · 管理资金 · 参加 BO3 对战 · 建设你的俱乐部</small>';};
  const oldRenderMain=render;render=function(){oldRenderMain();const menu=document.getElementById(menuId);if(menu&&state.storyFlags?.intro){const p=menu.querySelector('.main-menu-profile');if(p)p.querySelector('b').textContent=state.clubName||'VOLT Academy'}};
  setTimeout(openMainMenu,60);
+})();// First launch flow: skip the title menu and enter the opening story automatically.
+(function(){
+ const originalOpenMainMenu=openMainMenu;
+ openMainMenu=function(){
+  let saved=false;
+  try{saved=!!localStorage.getItem('volt-save')}catch(e){}
+  if(!saved&&!state.storyFlags?.intro){
+   document.getElementById('volt-main-menu')?.remove();
+   document.body.classList.remove('menu-open');
+   state.page='dashboard';
+   render();
+   return;
+  }
+  originalOpenMainMenu();
+ };
+ const originalNewCareer=newMainCareer;
+ newMainCareer=function(){
+  originalNewCareer();
+ };
+ setTimeout(function(){
+  let saved=false;
+  try{saved=!!localStorage.getItem('volt-save')}catch(e){}
+  if(!saved&&!state.storyFlags?.intro){
+   document.getElementById('volt-main-menu')?.remove();
+   document.body.classList.remove('menu-open');
+   state.page='dashboard';
+   render();
+  }
+ },80);
 })();
