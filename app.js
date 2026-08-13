@@ -857,46 +857,6 @@ ensureGameplayExpansion();if(!state.weeklyContract)resetWeeklyExpansion();render
  const oldCampaignDashboard=storyDashboard;
  storyDashboard=function(){return oldCampaignDashboard()+storyCampaignPanel()};
  ensureCampaign();
-})();// Main menu: title screen, continue/new game entry and quick profile overview.
-(function(){
- const menuId='volt-main-menu';
- function hasSave(){try{return !!localStorage.getItem('volt-save')}catch(e){return false}}
- function closeMenu(){document.getElementById(menuId)?.remove();document.body.classList.remove('menu-open');render()}
- window.openMainMenu=function(){if(document.getElementById(menuId))return;document.body.classList.add('menu-open');const has=hasSave()||!!state.storyFlags?.intro;const overlay=document.createElement('div');overlay.id=menuId;overlay.innerHTML=`<div class="main-menu-bg"><div class="main-menu-grid"></div></div><div class="main-menu-content"><div class="main-menu-brand"><span class="main-menu-mark">V</span><div><b>VOLT</b><small>VALORANT MANAGER</small></div></div><div class="main-menu-kicker">VCT MANAGEMENT SIMULATION · CN</div><h2>你的战队，<em>你的时代。</em></h2><p class="main-menu-lead">从一间训练室开始，组建阵容、经营俱乐部、赢下比赛，向 VCT 世界舞台发起挑战。</p><div class="main-menu-actions">${has?'<button class="main-menu-btn primary" onclick="closeMainMenu()">继续生涯 <small>返回管理中心</small></button>':''}<button class="main-menu-btn ${has?'':'primary'}" onclick="newMainCareer()">${has?'新建生涯':'开始游戏'}<small>${has?'清除当前进度':'创建你的第一支战队'}</small></button><button class="main-menu-btn" onclick="showMainAbout()">游戏说明<small>了解玩法与目标</small></button></div><div class="main-menu-profile">${has?`<span>当前档案</span><b>${state.clubName||'VOLT Academy'}</b><small>经理 ${state.playerName||'未命名'} · ${state.division||'次级联赛'} · 第 ${state.week||1} 周</small>`:'<span>新赛季即将开始</span><b>BUILD YOUR LEGACY</b><small>管理 · 训练 · 对战 · 剧情</small>'}</div><div class="main-menu-footer"><span>VOLT // 2025</span><span>本地存档 · 离线可玩</span></div></div>`;document.body.appendChild(overlay)};
- window.closeMainMenu=closeMenu;
- window.newMainCareer=function(){if(hasSave()&&!confirm('确定要删除当前生涯并开始新游戏吗？'))return;try{localStorage.removeItem('volt-save')}catch(e){}location.reload()};
- window.showMainAbout=function(){const p=document.querySelector('#volt-main-menu .main-menu-profile');if(!p)return;p.innerHTML='<span>游戏目标</span><b>从网吧赛打进 VCT CN</b><small>签约选手 · 选择剧情 · 管理资金 · 参加 BO3 对战 · 建设你的俱乐部</small>';};
- const oldRenderMain=render;render=function(){oldRenderMain();const menu=document.getElementById(menuId);if(menu&&state.storyFlags?.intro){const p=menu.querySelector('.main-menu-profile');if(p)p.querySelector('b').textContent=state.clubName||'VOLT Academy'}};
- // Startup is controlled only by the authoritative launcher below.
-})();// First launch flow: skip the title menu and enter the opening story automatically.
-(function(){
- const originalOpenMainMenu=openMainMenu;
- openMainMenu=function(){
-  let saved=false;
-  try{saved=!!localStorage.getItem('volt-save')}catch(e){}
-  if(!saved&&!state.storyFlags?.intro){
-   document.getElementById('volt-main-menu')?.remove();
-   document.body.classList.remove('menu-open');
-   state.page='dashboard';
-   render();
-   return;
-  }
-  originalOpenMainMenu();
- };
- const originalNewCareer=newMainCareer;
- newMainCareer=function(){
-  originalNewCareer();
- };
- setTimeout(function(){
-  let saved=false;
-  try{saved=!!localStorage.getItem('volt-save')}catch(e){}
-  if(!saved&&!state.storyFlags?.intro){
-   document.getElementById('volt-main-menu')?.remove();
-   document.body.classList.remove('menu-open');
-   state.page='dashboard';
-   render();
-  }
- },80);
 })();// Immersive story presentation: cinematic opening scene and atmospheric campaign cards.
 (function(){
  const originalStoryIntro=storyIntro;
@@ -980,32 +940,6 @@ ensureGameplayExpansion();if(!state.weeklyContract)resetWeeklyExpansion();render
   if(btn){e.preventDefault();e.stopPropagation();openSettings();}
  },true);
  setTimeout(refreshManagerProfile,0);
-})();// Start page fix: the title screen is always the first page; a new game enters the opening story.
-(function(){
- const LAUNCH='volt-launch-story';
- function hasLaunchStory(){try{return sessionStorage.getItem(LAUNCH)==='1'}catch(e){return false}}
- function clearLaunchStory(){try{sessionStorage.removeItem(LAUNCH)}catch(e){}}
- const menuOpen=window.openMainMenu;
- window.openMainMenu=function(){
-  if(hasLaunchStory())return;
-  menuOpen();
- };
- window.newMainCareer=function(){
-  if(hasSave()&&!confirm('确定要删除当前生涯并开始新游戏吗？'))return;
-  try{localStorage.removeItem('volt-save');localStorage.removeItem('volt-save-backup');sessionStorage.setItem(LAUNCH,'1')}catch(e){}
-  location.reload();
- };
- function showOpeningStory(){
-  clearLaunchStory();
-  document.getElementById('volt-main-menu')?.remove();
-  document.body.classList.remove('menu-open');
-  state.page='dashboard';
-  ensureStory();
-  state.storyFlags=state.storyFlags||{};
-  state.storyFlags.intro=false;
-  render();
- }
- // Legacy startup timer disabled; authoritative launcher owns the first screen.
 })();// Authoritative launcher: replaces the accumulated startup overrides with one deterministic flow.
 (function(){
  const shell=document.querySelector('.app-shell');
