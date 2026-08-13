@@ -155,7 +155,7 @@ const eventCardWithCoaching=eventCard;eventCard=function(){return eventCardWithC
 render();
 
 // Manual map veto/pick and focused training room.
-const mapPool=['亚海悬城','深海明珠','森寒冬港','微风岛屿','莲华古城','日落之城','霓虹町','裂变峡谷','幽邃地窟','隐世修所','源工重镇'];
+const mapPool=['亚海悬城','深海明珠','森寒冬港','微风岛屿','莲华古城','日落之城','霓虹町','裂变峡谷','幽邃地窟','隐世修所','源工重镇','沿海矿镇'];
 function ensurePrepState(){state.mapDraft=state.mapDraft||{bans:[],picks:[],step:0,locked:false};state.training=state.training||{sessions:0,focus:'aim',fatigue:0,skills:{aim:50,utility:50,teamplay:50,clutch:50}}}
 function resetMapDraft(){ensurePrepState();state.mapDraft={bans:[],picks:[],step:0,locked:false};save();render();toast('地图 BP 已重置')}
 function mapAction(map){ensurePrepState();const d=state.mapDraft;if(d.locked||d.step>=5)return;if(d.bans.includes(map)||d.picks.includes(map))return toast('这张地图已经处理');if(d.step<3){d.bans.push(map);d.step++;toast('已禁用 '+map)}else{d.picks.push(map);d.step++;toast('已选择 '+map)}if(d.step>=5)d.locked=true;save();render()}
