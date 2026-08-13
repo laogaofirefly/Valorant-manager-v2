@@ -978,4 +978,30 @@ ensureGameplayExpansion();if(!state.weeklyContract)resetWeeklyExpansion();render
   if(btn){e.preventDefault();e.stopPropagation();openSettings();}
  },true);
  setTimeout(refreshManagerProfile,0);
+})();// Start page fix: the title screen is always the first page; a new game enters the opening story.
+(function(){
+ const LAUNCH='volt-launch-story';
+ function hasLaunchStory(){try{return sessionStorage.getItem(LAUNCH)==='1'}catch(e){return false}}
+ function clearLaunchStory(){try{sessionStorage.removeItem(LAUNCH)}catch(e){}}
+ const menuOpen=window.openMainMenu;
+ window.openMainMenu=function(){
+  if(hasLaunchStory())return;
+  menuOpen();
+ };
+ window.newMainCareer=function(){
+  if(hasSave()&&!confirm('确定要删除当前生涯并开始新游戏吗？'))return;
+  try{localStorage.removeItem('volt-save');localStorage.removeItem('volt-save-backup');sessionStorage.setItem(LAUNCH,'1')}catch(e){}
+  location.reload();
+ };
+ function showOpeningStory(){
+  clearLaunchStory();
+  document.getElementById('volt-main-menu')?.remove();
+  document.body.classList.remove('menu-open');
+  state.page='dashboard';
+  ensureStory();
+  state.storyFlags=state.storyFlags||{};
+  state.storyFlags.intro=false;
+  render();
+ }
+ setTimeout(function(){if(hasLaunchStory())showOpeningStory();else window.openMainMenu()},180);
 })();
