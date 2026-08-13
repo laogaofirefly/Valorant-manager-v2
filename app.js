@@ -972,9 +972,17 @@ ensureGameplayExpansion();if(!state.weeklyContract)resetWeeklyExpansion();render
  function restoreFromBFCache(){clearTimeout(timer);clearLauncher();showShell();render();refreshManagerProfile?.()}
  function boot(event){clearTimeout(timer);if(event&&event.persisted){restoreFromBFCache();return}if(booted)return;booted=true;timer=setTimeout(startScreen,0)}
  window.voltShowStartPage=startScreen;
- window.addEventListener('pageshow',boot);
- // Visibility changes never reopen or replace the launcher.
- boot();
+ // Rebuild the authoritative launcher on every page restore, matching the previous working fix.
+ let launcherTimer=0;
+ function scheduleLauncher(){
+  clearTimeout(launcherTimer);
+  launcherTimer=setTimeout(startScreen,60);
+ }
+ window.addEventListener('pageshow',scheduleLauncher);
+ window.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='visible')scheduleLauncher();
+ });
+ scheduleLauncher();
 })();
 // Match center UX upgrade: live tournament board, round timeline and readable tactical controls.
 const MATCH_TEAMS=['VOLT Academy','Nova Esports','Bilibili Gaming','EDward Gaming','Wolves Esports','DRG'];
