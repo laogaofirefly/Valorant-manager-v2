@@ -406,4 +406,19 @@ function milestonePanel(){
 }
 function claimMilestone(id){state.milestones=state.milestones||{};if(state.milestones[id])return toast('奖励已经领取');const m=MILESTONES.find(x=>x[0]===id);if(!m||!m[3](state))return toast('还未达到领取条件');state.milestones[id]=true;if(id==='first-win')state.money+=20000;if(id==='full-roster')state.reputation+=50;if(id==='five-wins')state.money+=50000;if(id==='promotion')state.reputation+=120;if(id==='popular')state.money+=35000;storySave();toast('里程碑奖励已领取：'+m[4]);render()}
 const dashboardWithMoreLoops=guidedDashboard;guidedDashboard=function(){const html=dashboardWithMoreLoops();return html.replace('<div class="guide-flow">',clubEventPanel()+milestonePanel()+'<div class="guide-flow">')};
-render();
+render();// Navigation cleanup: keep only actionable destinations visible; remove dead header controls.
+function openCleanPage(target){state.page=target;const url=Object.keys(pathPages).find(k=>pathPages[k]===target)||'/';history.pushState({},'',BASE+(url==='/'?'/' :(url.endsWith('/')?url:url+'/')));render()}
+function cleanNavigation(){
+ const nav=document.querySelector('#nav');if(!nav)return;
+ const keep=[['dashboard','◈','管理中心'],['roster','♙','阵容与市场'],['schedule','◷','赛程与比赛'],['tactics','⌁','训练与战术'],['academy','✦','青训与二队'],['finance','◫','财务与赞助']];
+ nav.innerHTML=keep.map(x=>`<button data-page="${x[0]}"><i>${x[1]}</i> ${x[2]}</button>`).join('');
+ nav.querySelectorAll('button').forEach(b=>b.onclick=()=>openCleanPage(b.dataset.page));
+ const unused=document.querySelector('.icon-btn');if(unused)unused.remove();
+ const notify=document.querySelector('.notify');if(notify){notify.setAttribute('aria-label','打开消息');notify.title='消息中心'}
+}
+const oldCleanRender=render;render=function(){oldCleanRender();cleanNavigation()};
+function cleanedClub(){ensureStory();const name=state.clubName||'你的战队';const ids=state.signed||[];return `<div class="hero"><div><span class="eyebrow">TEAM HUB · ${ids.length}/5 首发</span><h2>${name}</h2><p>管理合同内选手、训练计划和战队状态。</p></div><button class="btn" onclick="openCleanPage('roster')">补齐阵容</button></div>${signedPlayersPanel()}${detailedTrainingPanel()}<section class="card wide"><div class="card-head"><h2>俱乐部设置</h2><span class="muted">低频操作</span></div>${clubNamePanel()}</section>`}
+club=cleanedClub;
+function cleanedFinance(){ensureStory();const f=monthlyFinance();return `<div class="hero"><div><span class="eyebrow">FINANCE · MONTH ${state.month||1}</span><h2>资金与合同</h2><p>先保证工资和房租，再考虑设施升级和商业投资。</p></div></div><div class="grid stats"><div class="card"><span class="stat-label">当前预算</span><div class="stat-value">¥${(state.money||0).toLocaleString()}</div></div><div class="card"><span class="stat-label">每月工资</span><div class="stat-value">¥${f.payroll.toLocaleString()}</div></div><div class="card"><span class="stat-label">每月场地</span><div class="stat-value">¥${f.rent.toLocaleString()}</div></div><div class="card"><span class="stat-label">赞助收入</span><div class="stat-value">¥${f.income.toLocaleString()}</div></div></div><section class="card wide"><div class="card-head"><h2>合同与赞助</h2><span class="badge">${state.sponsor?'已有合作':'尚未签约'}</span></div><p class="muted">${state.sponsor?'当前赞助收入已计入月度现金流。':'提升声望后可获得更好的商业合同。'}</p><button class="btn" onclick="signSponsor()">${state.sponsor?'查看赞助合同':'谈判赞助'}</button></section>${saveStatusPanel()}`}
+finance=cleanedFinance;
+cleanNavigation();render();
