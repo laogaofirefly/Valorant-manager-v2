@@ -867,7 +867,7 @@ ensureGameplayExpansion();if(!state.weeklyContract)resetWeeklyExpansion();render
  window.newMainCareer=function(){if(hasSave()&&!confirm('确定要删除当前生涯并开始新游戏吗？'))return;try{localStorage.removeItem('volt-save')}catch(e){}location.reload()};
  window.showMainAbout=function(){const p=document.querySelector('#volt-main-menu .main-menu-profile');if(!p)return;p.innerHTML='<span>游戏目标</span><b>从网吧赛打进 VCT CN</b><small>签约选手 · 选择剧情 · 管理资金 · 参加 BO3 对战 · 建设你的俱乐部</small>';};
  const oldRenderMain=render;render=function(){oldRenderMain();const menu=document.getElementById(menuId);if(menu&&state.storyFlags?.intro){const p=menu.querySelector('.main-menu-profile');if(p)p.querySelector('b').textContent=state.clubName||'VOLT Academy'}};
- setTimeout(openMainMenu,60);
+ // Startup is controlled only by the authoritative launcher below.
 })();// First launch flow: skip the title menu and enter the opening story automatically.
 (function(){
  const originalOpenMainMenu=openMainMenu;
@@ -952,7 +952,7 @@ ensureGameplayExpansion();if(!state.weeklyContract)resetWeeklyExpansion();render
  settingsPanel=function(){return originalSettingsPanel().replace('</div></section></div>','<div class="settings-danger"><button class="btn danger" data-delete-career>删除当前生涯</button></div></div></section></div>')};
  // Always expose the launcher first; the player chooses Continue or New Game.
  const fresh=consumeFreshStart();
- setTimeout(()=>{if(fresh||document.getElementById('page'))openMainMenu()},80);
+ // Legacy startup timer disabled; authoritative launcher owns the first screen.
 })();// v1.0.1 follow-up: ensure the settings modal always contains a working delete button.
 (function(){
  const previousSettingsPanel101=settingsPanel;
@@ -1005,7 +1005,7 @@ ensureGameplayExpansion();if(!state.weeklyContract)resetWeeklyExpansion();render
   state.storyFlags.intro=false;
   render();
  }
- setTimeout(function(){if(hasLaunchStory())showOpeningStory();else window.openMainMenu()},180);
+ // Legacy startup timer disabled; authoritative launcher owns the first screen.
 })();// Authoritative launcher: replaces the accumulated startup overrides with one deterministic flow.
 (function(){
  const shell=document.querySelector('.app-shell');
