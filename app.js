@@ -937,7 +937,7 @@ ensureGameplayExpansion();if(!state.weeklyContract)resetWeeklyExpansion();render
  const oldRender10=render;render=function(){oldRender10();document.querySelectorAll('#nav button').forEach(b=>b.title=b.textContent.trim());};
  window.restoreV10Backup=function(){try{const raw=localStorage.getItem('volt-save-backup');if(!raw)return toast('没有可恢复的备份');localStorage.setItem('volt-save',raw);location.reload()}catch(e){toast('备份恢复失败')}};
  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&document.getElementById('volt-main-menu'))closeMainMenu();if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault();storySave();toast('进度已保存')}});
- setTimeout(()=>{ensureStory();ensureTasks();},0);
+ setTimeout(()=>{ensureStory();},0);
 })();// v1.0.1 bug fixes: startup menu, complete save deletion, and manager settings interaction.
 (function(){
  const SAVE_KEYS=['volt-save','volt-save-backup'];
