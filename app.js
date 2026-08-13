@@ -467,4 +467,34 @@ if(state.playerRatings){Object.entries(fictionalIdMigration).forEach(([oldId,new
 function fictionalMarketDescription(){return '网吧赛与地区小型赛选手均为虚构角色，姓名、ID、队伍和履历均为本游戏原创设定。'}
 const oldRosterIdentity=roster;
 roster=function(){return oldRosterIdentity().replace('综合评分、合同价格与现实竞技水平挂钩；高水平选手身价更高。',''+fictionalMarketDescription()+' 评分和身价随赛事级别逐步提升。')};
-storySave();render();
+storySave();render();// Open transfer market: every player is visible and negotiable at every stage.
+// Quality, not league access, determines the transfer fee.
+LOWER_LEAGUES.length=0;
+LOWER_LEAGUES.push(
+ {id:'internet-cafe',name:'网吧赛',division:'网吧赛',format:'BO1 小组赛 + BO3 决赛',teams:16,required:0,bonus:15000,rep:30,fictional:true},
+ {id:'regional-mini',name:'地区小型赛',division:'地区小型赛',format:'BO3 常规赛 + BO3 淘汰赛',teams:12,required:250,bonus:45000,rep:70,fictional:true},
+ {id:'national-open',name:'全国大赛',division:'全国大赛',format:'BO3 双循环 + BO5 决赛',teams:16,required:500,bonus:80000,rep:110,fictional:true},
+ {id:'challengers',name:'Challengers CN',division:'Challengers CN',format:'BO3 常规赛 + BO3 季后赛',teams:10,required:900,bonus:120000,rep:180,authentic:true},
+ {id:'vct',name:'VCT CN',division:'VCT CN',format:'官方 BO3 常规赛 + 季后赛',teams:12,required:1600,bonus:250000,rep:300,authentic:true}
+);
+function playerQuality(p){return Math.max(55,Math.min(99,Number((state.playerRatings&&state.playerRatings[p[0]])||playerRating(p)||65)))}
+function playerTransferFee(p){
+ const q=playerQuality(p),salary=salaryOf(p[0])||30000;
+ // Low-rated grassroots players remain affordable; elite players cost several seasons of cashflow.
+ const multiplier=q>=92?8:q>=86?5:q>=80?3.2:q>=74?2:q>=68?1.25:.8;
+ return Math.round(Math.max(18000,salary*multiplier)/1000)*1000;
+}
+function transferBand(q){return q>=92?'明星核心':q>=86?'职业主力':q>=80?'高潜主力':q>=74?'成熟选手':'地方新秀'}
+availablePlayer=function(){return true};
+sign=function(name){ensureStory();const p=players.find(x=>x[0]===name);if(!p)return;if(state.signed.includes(name))return toast('该选手已经签约');if(state.signed.length>=7)return toast('阵容最多保留 5 名首发与 2 名替补');const fee=playerTransferFee(p);if(state.money<fee)return toast(`${p[0]} 是${transferBand(playerQuality(p))}，转会费 ¥${fee.toLocaleString()}，当前预算不足`);state.money-=fee;state.signed.push(name);state.contracts[name]={salary:salaryOf(name),months:12};state.chemistry=Math.min(100,(state.chemistry||0)+2);state.reputation=(state.reputation||0)+10;storySave();toast(`已签约 ${name}，转会费 ¥${fee.toLocaleString()}，月薪 ¥${salaryOf(name).toLocaleString()}`);render()};
+// Show the actual transfer fee in every market card, while keeping all players listed.
+const marketRenderBeforeFee=roster;
+roster=function(){let html=marketRenderBeforeFee();return html.replace(/<span>¥([^<]+) \/ 年<\/span>/g,(m)=>{const raw=m.match(/¥([^<]+)/)[1].replace(/[^0-9]/g,'');const p=players.find(x=>String(x[5]).replace(/[^0-9]/g,'')===raw);return p?`<span>转会费 ¥${playerTransferFee(p).toLocaleString()} · 月薪 ¥${salaryOf(p[0]).toLocaleString()}</span>`:m})};
+function lowerOpponents(){return state.leagueIndex<3?['网吧黑屏队','蓝屏俱乐部','夜班五人组','像素工坊','地铁出口','红灯笼电竞']:['Bilibili Gaming','EDward Gaming','Wolves Esports','Xi Lai Gaming','Nova Esports','Dragon Ranger']}
+const oldAvailablePlayerProgression=availablePlayerProgression;
+availablePlayerProgression=function(){return true};
+// Correct authentic-ecosystem threshold after adding the National Championship.
+const oldCompetitionMarket=competitionInfo;
+competitionInfo=function(){ensureLowerLeagues();const l=currentLeague(),authentic=state.leagueIndex>=3;const intro=state.leagueIndex===0?'从网吧包间打出名气，优先签下性价比高的地方选手。':state.leagueIndex===1?'在地区赛场建立战队品牌，逐步积累转会预算。':state.leagueIndex===2?'全国大赛是实力分水岭，强队和高价选手开始集中出现。':authentic&&state.leagueIndex===3?'Challengers CN 使用真实职业赛事与队伍，但所有选手仍可提前尝试签约。':'VCT CN 是最高级别赛场，顶级选手价格极高。';return `<section class="card wide progression-card"><div class="card-head"><h2>${l.name}</h2><span class="badge">阶段 ${state.leagueIndex+1}/5</span></div><p>${intro}</p><div class="event-meta"><span>赛制：${l.format}</span><span>参赛队：${l.teams} 队</span><span>${authentic?'真实赛事队伍与职业生态':'虚构赛事、队伍与选手'}</span><span>赛季：${state.leagueSeason.played}/8 场</span></div></section>`}
+if(state.division==='次级联赛')state.division='网吧赛';
+render();
