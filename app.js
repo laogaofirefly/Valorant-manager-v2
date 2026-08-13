@@ -293,3 +293,21 @@ function replayGame(){
 }
 function saveStatusPanel(){return `<section class="card wide"><div class="card-head"><h2>本地存档</h2><span class="badge">${hasLocalSave()?'已保存':'未创建'}</span></div><p class="muted">游戏进度保存在当前浏览器的本地存储中，不会自动上传到服务器。更换浏览器、清除网站数据或使用隐私模式可能导致存档丢失。</p><button class="btn alt" onclick="replayGame()">删除存档并重玩</button></section>`}
 const oldStoryDashboardReplay=storyDashboard;storyDashboard=function(){const html=oldStoryDashboardReplay();return html+saveStatusPanel()};
+// Club name editing with local-save persistence.
+function renameClub(name){
+ ensureStory();
+ name=(name||'').trim().replace(/[<>]/g,'');
+ if(!name)return toast('请输入新的战队名称');
+ if(name.length<2)return toast('战队名至少需要 2 个字符');
+ if(name.length>24)return toast('战队名不能超过 24 个字符');
+ state.clubName=name;
+ storySave();
+ toast('战队名称已修改为：'+name);
+ render();
+}
+function clubNamePanel(){
+ ensureStory();
+ return `<section class="card wide"><div class="card-head"><h2>战队名称</h2><span class="badge">本地保存</span></div><p class="muted">修改后的战队名称会同步显示在管理中心、赛事赛程和我的战队页面。</p><div class="tactic"><input id="club-name-input" class="search" maxlength="24" value="${String(state.clubName||'').replace(/&/g,'&amp;').replace(/"/g,'"').replace(/</g,'&lt;').replace(/>/g,'&gt;')}" placeholder="请输入战队名称"><button class="btn" onclick="renameClub(document.querySelector('#club-name-input').value)">保存战队名</button></div></section>`;
+}
+const previousStoryDashboardName=storyDashboard;
+storyDashboard=function(){return previousStoryDashboardName()+clubNamePanel()};
