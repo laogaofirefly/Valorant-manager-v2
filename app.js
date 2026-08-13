@@ -1174,3 +1174,29 @@ const oldGScene=storyDashboard;storyDashboard=function(){return oldGScene()+scen
  const oldAdvance=advanceWeek;advanceWeek=function(){oldAdvance();prepare();storySave();render()};
  init();prepare();
 })();
+
+// Coaching system v2: staff development, specializations, scouting and match authority.
+(function(){
+ const SPECIALTIES={head:[['leadership','更衣室管理'],['pressure','大赛心理']],strategist:[['attack','进攻体系'],['defense','防守体系']],analyst:[['anti','反制分析'],['economy','经济分析']]};
+ const PLAN_INFO={attack:{name:'进攻体系',cost:2500,prep:10},defense:{name:'防守体系',cost:1500,morale:6},review:{name:'录像复盘',cost:2000,chemistry:5},scout:{name:'对手侦察',cost:3500,analysis:12}};
+ function init(){
+  if(typeof ensureCoachState==='function')ensureCoachState();
+  state.coaching=state.coaching||{head:null,strategist:null,analyst:null,session:0,plan:'default'};
+  state.coaching.development=state.coaching.development||{};
+  state.coaching.lastPlanWeek=Number.isFinite(state.coaching.lastPlanWeek)?state.coaching.lastPlanWeek:0;
+  state.coaching.tacticalCalls=Number.isFinite(state.coaching.tacticalCalls)?state.coaching.tacticalCalls:0;
+  Object.keys(SPECIALTIES).forEach(slot=>{const c=state.coaching[slot];if(c){c.level=Math.max(1,Math.min(5,c.level||1));c.xp=Number(c.xp)||0;c.specialty=c.specialty||SPECIALTIES[slot][0][0]}});
+ }
+ function coach(slot){init();return state.coaching[slot]}
+ function cost(slot){const c=coach(slot);return c?Math.round((c.salary||0)*(1+(c.level-1)*.18)):0}
+ window.trainCoach=function(slot){init();const c=coach(slot);if(!c)return toast('该岗位暂无教练');if((state.actions||0)<1)return toast('本周行动点已用完');const fee=4000+c.level*1500;if((state.money||0)<fee)return toast('教练培养预算不足，需要 ¥'+fee.toLocaleString());state.actions--;state.money-=fee;c.xp+=25+(state.facility?.analysis||0)*3;if(c.xp>=100){c.xp-=100;c.level=Math.min(5,c.level+1);toast(c.name+' 能力提升至 Lv.'+c.level)}else toast(c.name+' 完成专项培养');storySave();render()};
+ window.setCoachSpecialty=function(slot,specialty){init();const c=coach(slot);if(!c||!SPECIALTIES[slot].some(x=>x[0]===specialty))return;c.specialty=specialty;storySave();toast(c.name+' 已改为'+SPECIALTIES[slot].find(x=>x[0]===specialty)[1]);render()};
+ window.useCoachAuthority=function(type){init();if(!state.coaching.head&&!state.coaching.strategist&&!state.coaching.analyst)return toast('请先签约教练');if(state.coaching.authorityWeek===state.week)return toast('本周教练权威只能使用一次');state.coaching.authorityWeek=state.week;const h=coach('head'),s=coach('strategist'),a=coach('analyst');if(type==='motivate'){state.morale=Math.min(100,(state.morale||0)+8+(h?.level||0));state.prep=Math.min(100,(state.prep||0)+2);addMessage('教练权威','主教练在赛前稳定了队伍情绪，士气得到提升。',messageClock())}else if(type==='counter'){if(!a)return toast('需要比赛分析师');state.prep=Math.min(100,(state.prep||0)+10+(a.level||0)*2);state.analysis=(state.analysis||0)+5+(a.level||0);addMessage('教练权威','分析师提交了针对性反制方案，赛前准备度提升。',messageClock())}else{if(!s)return toast('需要战术教练');state.prep=Math.min(100,(state.prep||0)+8+(s.level||0)*2);state.chemistry=Math.min(100,(state.chemistry||0)+3);addMessage('教练权威','战术教练完成最后部署，队伍执行更加统一。',messageClock())}state.coaching.tacticalCalls++;storySave();toast('教练权威已使用');render()};
+ function bonus(){init();const c=state.coaching;const level=slot=>c[slot]?.level||0;return {training:level('strategist')*2+level('analyst'),morale:level('head')*2,analysis:level('analyst')*2,chemistry:level('head')+level('strategist'),pressure:c.head?.specialty==='pressure'?level('head')*2:0}}
+ window.coachingBonusV2=bonus;
+ function card(slot,label){const c=coach(slot),opts=SPECIALTIES[slot]||[];if(!c)return '';const b=bonus();return `<div class="coach-upgrade"><div class="coach-upgrade-head"><b>${label} Lv.${c.level}</b><span class="badge">XP ${c.xp}/100</span></div><small>${c.name} · 月薪 ¥${cost(slot).toLocaleString()}</small><div class="coach-xp"><i style="width:${c.xp}%"></i></div><label>专精<select onchange="setCoachSpecialty('${slot}',this.value)">${opts.map(x=>`<option value="${x[0]}" ${c.specialty===x[0]?'selected':''}>${x[1]}</option>`).join('')}</select></label><button class="btn alt" onclick="trainCoach('${slot}')">培养教练 · ¥${(4000+c.level*1500).toLocaleString()}</button></div>`}
+ function extraPanel(){init();const b=bonus(),c=state.coaching;return `<section class="card wide coach-v2"><div class="card-head"><h2>教练发展与临场权威</h2><span class="badge">本周${c.authorityWeek===state.week?'已使用':'可使用'}</span></div><div class="coach-upgrade-grid">${card('head','主教练')}${card('strategist','战术教练')}${card('analyst','比赛分析师')}</div><div class="coach-effects"><span>训练效率 +${b.training}</span><span>士气 +${b.morale}</span><span>分析 +${b.analysis}</span><span>化学反应 +${b.chemistry}</span></div><div class="coach-authority"><b>本周教练权威</b><button class="btn alt" onclick="useCoachAuthority('motivate')">临场激励 · 士气</button><button class="btn alt" onclick="useCoachAuthority('counter')">针对性反制 · 分析</button><button class="btn alt" onclick="useCoachAuthority('execute')">战术执行 · 准备度</button><small>每周只能使用一次，缺少对应岗位时无法执行。</small></div></section>`}
+ const oldPanel=window.coachPanel;window.coachPanel=function(){return (oldPanel?oldPanel():'')+extraPanel()};
+ const oldWeek=window.advanceWeek;window.advanceWeek=function(){init();oldWeek();init();const b=bonus();state.prep=Math.min(100,(state.prep||0)+Math.floor(b.training/3));state.morale=Math.min(100,(state.morale||0)+Math.floor(b.morale/4));if(state.coaching.plan==='scout'&&coach('analyst'))state.analysis=(state.analysis||0)+b.analysis;storySave();render()};
+ init();
+})();
