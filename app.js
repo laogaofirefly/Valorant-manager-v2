@@ -1266,3 +1266,25 @@ const oldScheduleFormat=schedule;schedule=function(){return oldScheduleFormat()+
 const oldStartLowerFormat=startLowerMatch;startLowerMatch=function(){state.currentCompetitionStage=stageName();return oldStartLowerFormat()};
 const oldFinishFormat=finishLiveMatch;finishLiveMatch=function(){const m=state.liveMatch;if(m)m.competitionStage=state.currentCompetitionStage||stageName();oldFinishFormat()};
 })();
+
+// First-time player onboarding: a guided tour with contextual next actions.
+(function(){
+ const ONBOARD_STEPS=[
+  {id:'welcome',title:'欢迎来到 VOLT 电竞经理',desc:'你将从基层赛场开始，组建战队、管理资金、参加比赛，最终冲击 VCT。',action:'知道了，开始引导',page:null},
+  {id:'roster',title:'第一步：组建五人首发',desc:'打开“阵容与市场”，签下至少 5 名选手。完整首发是参加正式比赛的必要条件。',action:'前往阵容市场',page:'roster'},
+  {id:'tactics',title:'第二步：完成赛前准备',desc:'在训练与战术页面进行训练、录像复盘或对手分析，获得行动点和准备度。',action:'前往训练与战术',page:'tactics'},
+  {id:'schedule',title:'第三步：进入比赛',desc:'打开“赛程与比赛”，查看当前赛制、赛程和明确的“进入比赛”按钮。',action:'打开赛事中心',page:'schedule'},
+  {id:'match',title:'第四步：赢下比赛',desc:'完成地图 BP 后，在比赛操作台选择每回合战术。比赛结束后，名次会记录到荣誉殿堂。',action:'查看赛事中心',page:'schedule'},
+  {id:'finish',title:'基础引导完成',desc:'你已经掌握了开始游戏所需的流程。接下来可以经营俱乐部、培养青训、晋级全国大赛和挑战 VCT。',action:'开始经营',page:'dashboard'}
+ ];
+ function ensureOnboarding(){state.onboarding=state.onboarding||{step:0,done:false,enabled:true};if(typeof state.onboarding.step!=='number')state.onboarding.step=0}
+ function currentStep(){ensureOnboarding();return ONBOARD_STEPS[state.onboarding.step]||ONBOARD_STEPS[ONBOARD_STEPS.length-1]}
+ function saveOnboarding(){try{storySave()}catch(e){try{save()}catch(e2){}}}
+ window.openOnboarding=function(force){ensureOnboarding();if(force){state.onboarding.step=0;state.onboarding.done=false;state.onboarding.enabled=true}showOnboarding()};
+ window.showOnboarding=function(){ensureOnboarding();document.querySelector('#onboarding-modal')?.remove();const s=currentStep(),done=state.onboarding.done||s.id==='finish',x=document.createElement('div');x.id='onboarding-modal';x.className='inbox-layer onboarding-layer';x.innerHTML=`<div class="onboarding-modal"><div class="onboarding-top"><span class="eyebrow">VOLT // NEW PLAYER GUIDE</span><button class="close-inbox" aria-label="关闭新手引导" onclick="closeOnboarding()">×</button></div><div class="onboarding-progress"><i style="width:${Math.min(100,(state.onboarding.step/(ONBOARD_STEPS.length-1))*100)}%"></i></div><div class="onboarding-step-count">${done?'引导完成':`第 ${Math.min(state.onboarding.step+1,ONBOARD_STEPS.length-1)} / ${ONBOARD_STEPS.length-1} 步`}</div><h2>${s.title}</h2><p>${s.desc}</p><div class="onboarding-route">${ONBOARD_STEPS.slice(1,-1).map((v,i)=>`<span class="${i+1<state.onboarding.step?'done':i+1===state.onboarding.step?'active':''}">${i+1}. ${v.title.replace(/^.*：/,'')}</span>`).join('')}</div><div class="onboarding-actions"><button class="btn alt" onclick="closeOnboarding()">稍后查看</button><button class="btn" onclick="nextOnboarding()">${s.action}</button></div><label class="onboarding-skip"><input type="checkbox" onchange="state.onboarding.enabled=!this.checked;saveOnboarding()"> 不再自动显示</label></div>`;document.body.appendChild(x)};
+ window.closeOnboarding=function(){document.querySelector('#onboarding-modal')?.remove();ensureOnboarding();state.onboarding.enabled=false;saveOnboarding()};
+ window.nextOnboarding=function(){ensureOnboarding();const s=currentStep();if(s.page){state.onboarding.step=Math.min(ONBOARD_STEPS.length-1,state.onboarding.step+1);state.page=s.page;const u=Object.keys(pathPages).find(k=>pathPages[k]===s.page)||'/';history.pushState({},'',BASE+(u==='/'?'/' :(u.endsWith('/')?u:u+'/')));saveOnboarding();document.querySelector('#onboarding-modal')?.remove();render();setTimeout(()=>{if(state.onboarding.step<ONBOARD_STEPS.length-1)showOnboarding()},180)}else{state.onboarding.step=1;saveOnboarding();document.querySelector('#onboarding-modal')?.remove();render();setTimeout(showOnboarding,100)}};
+ function onboardingNav(){const nav=document.querySelector('#nav');if(!nav||nav.querySelector('[data-page="onboarding"]'))return;const b=document.createElement('button');b.dataset.page='onboarding';b.innerHTML='<i>?</i> 新手引导';b.title='重新打开新手引导';b.onclick=()=>openOnboarding(true);nav.appendChild(b)}
+ const oldRenderOnboarding=render;render=function(){oldRenderOnboarding();onboardingNav();ensureOnboarding();if(state.storyFlags?.intro&&!state.onboarding.done&&state.onboarding.enabled&&!document.querySelector('#onboarding-modal')&&state.onboarding.step===0)setTimeout(showOnboarding,220)};
+ window.finishOnboarding=function(){ensureOnboarding();state.onboarding.done=true;state.onboarding.enabled=false;saveOnboarding();document.querySelector('#onboarding-modal')?.remove();render()};
+})();
