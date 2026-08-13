@@ -1095,3 +1095,18 @@ const oldGScene=storyDashboard;storyDashboard=function(){return oldGScene()+scen
  window.advanceMonth=function(){oldMonthly();if((state.money||0)<0){state.debt=(state.debt||0)+Math.abs(state.money);state.money=0}if((state.debt||0)>0){const fee=Math.min(state.debt,Math.round(state.debt*.03));state.money=Math.max(0,(state.money||0)-fee);state.debt=Math.max(0,state.debt-fee);addMessage('财务审查','俱乐部存在负债，本月偿还 ¥'+fee.toLocaleString()+'。',messageClock())}storySave()};
  const oldStorySave=window.storySave;window.storySave=function(){if(state.money>50000000)state.money=50000000;if(state.fans>999999)state.fans=999999;if(state.reputation>5000)state.reputation=5000;oldStorySave()};
 })();
+
+// Coach system expansion: payroll, weekly preparation limits and role synergy.
+(function(){
+ const COACH_PAY={head:26000,strategist:18000,analyst:15000};
+ function init(){if(typeof ensureCoachState==='function')ensureCoachState();state.coaching=state.coaching||{head:null,strategist:null,analyst:null,session:0,plan:'default'};state.coaching.planWeek=Number.isFinite(state.coaching.planWeek)?state.coaching.planWeek:0;state.coaching.meetings=Number.isFinite(state.coaching.meetings)?state.coaching.meetings:0}
+ function payroll(){init();return Object.keys(COACH_PAY).reduce((n,k)=>n+(state.coaching[k]?COACH_PAY[k]:0),0)}
+ window.coachPayroll=payroll;
+ const oldPlan=window.setCoachPlan;
+ window.setCoachPlan=function(plan){init();if(!state.coaching.head&&!state.coaching.strategist&&!state.coaching.analyst)return toast('请先签约至少一名教练');if(state.coaching.planWeek===state.week)return toast('本周教练会议已经完成');const cost=plan==='attack'?2500:plan==='defense'?1500:2000;if((state.money||0)<cost)return toast('教练会议预算不足，需要 ¥'+cost.toLocaleString());state.money-=cost;state.coaching.planWeek=state.week;state.coaching.meetings++;if(oldPlan)oldPlan(plan);state.coaching.plan=plan;storySave();toast('教练计划已执行，会议成本 ¥'+cost.toLocaleString());render()};
+ const oldMonth=window.advanceMonth;
+ window.advanceMonth=function(){const before=state.money||0;oldMonth();init();const pay=payroll();state.money=(state.money||0)-pay;state.coaching.planWeek=0;state.coaching.contractMonths=(state.coaching.contractMonths||12)-1;if(state.money<0){state.debt=(state.debt||0)+Math.abs(state.money);state.money=0}addMessage('教练组结算','本月教练工资 ¥'+pay.toLocaleString()+'，教练组继续为下一阶段备战。',messageClock());storySave()};
+ const oldCoachPanel=window.coachPanel;
+ if(oldCoachPanel)window.coachPanel=function(){init();return oldCoachPanel()+`<div class="coach-payroll"><span>本月教练工资</span><b>¥${payroll().toLocaleString()}</b><small>每月结算 · 计划每周限一次 · 已完成会议 ${state.coaching.meetings} 次</small></div>`};
+ init();
+})();
