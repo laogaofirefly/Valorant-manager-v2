@@ -683,4 +683,28 @@ const oldAdvanceForAutoStory=advanceWeek;
 advanceWeek=function(){oldAdvanceForAutoStory();runAutomaticStory();render()};
 const oldGuidedForAutoStory=storyDashboard;
 storyDashboard=function(){const html=oldGuidedForAutoStory();return html+automaticStoryPanel()};
-ensureStoryArc();runAutomaticStory();render();
+ensureStoryArc();runAutomaticStory();render();// Content expansion: rival clubs, automatic weekly incidents, season goals, form and media reputation.
+const CONTENT_RIVALS=[
+ {name:'Ironclad Gaming',style:'纪律严明',region:'CN',base:72},
+ {name:'Nova Esports',style:'快攻压迫',region:'CN',base:76},
+ {name:'Harbor Wolves',style:'残局运营',region:'CN',base:79},
+ {name:'Red Meridian',style:'个人能力',region:'Pacific',base:82}
+];
+const CONTENT_INCIDENTS=[
+ {title:'训练室停电',body:'晚间训练被迫中断，后勤团队连夜修复了设备。',effect:'士气 -2，准备度 -5',apply:s=>{s.morale=Math.max(0,(s.morale||70)-2);s.prep=Math.max(0,(s.prep||0)-5)}},
+ {title:'分析师的发现',body:'录像中发现了对手在手枪局的固定习惯。',effect:'准备度 +8',apply:s=>{s.prep=Math.min(100,(s.prep||0)+8)}},
+ {title:'队长生日',body:'全队暂时放下训练，庆祝队长生日，队内气氛明显变好。',effect:'士气 +5，化学反应 +2',apply:s=>{s.morale=Math.min(100,(s.morale||70)+5);s.chemistry=Math.min(100,(s.chemistry||50)+2)}},
+ {title:'媒体采访',body:'一段训练赛集锦在社区走红，更多观众开始关注 VOLT。',effect:'声望 +12，粉丝 +80',apply:s=>{s.reputation=(s.reputation||0)+12;s.fans=(s.fans||0)+80}},
+ {title:'设备赞助试用',body:'硬件品牌送来一批试用设备，训练稳定性得到改善。',effect:'现金 +¥8,000，准备度 +4',apply:s=>{s.money=(s.money||0)+8000;s.prep=Math.min(100,(s.prep||0)+4)}},
+ {title:'战术争论',body:'队员对新战术的执行方式意见不一，但争论让方案更加成熟。',effect:'化学反应 -1，准备度 +10',apply:s=>{s.chemistry=Math.max(0,(s.chemistry||50)-1);s.prep=Math.min(100,(s.prep||0)+10)}}
+];
+function ensureContentPack(){ensureStory();state.content=state.content||{};state.content.lastWeek=Number(state.content.lastWeek||0);state.content.incidents=Array.isArray(state.content.incidents)?state.content.incidents:[];state.content.media=Array.isArray(state.content.media)?state.content.media:[];state.content.goals=state.content.goals||{training:0,media:0,win:0};state.rivals=Array.isArray(state.rivals)?state.rivals:CONTENT_RIVALS.map(x=>({...x,trust:0}));state.fans=Number(state.fans||0)}
+function contentWeeklyTick(){ensureContentPack();const w=state.week||1;if(state.content.lastWeek===w)return;state.content.lastWeek=w;const incident=CONTENT_INCIDENTS[(w*7+3)%CONTENT_INCIDENTS.length];incident.apply(state);state.content.incidents.unshift({week:w,title:incident.title,body:incident.body,effect:incident.effect});state.content.incidents=state.content.incidents.slice(0,8);if(w%3===0){const rival=state.rivals[(w/3-1)%state.rivals.length];rival.trust+=1;state.content.media.unshift({week:w,title:'赛区观察',body:`${rival.name} 的教练评价 VOLT 的${rival.style}风格值得关注。`});state.content.media=state.content.media.slice(0,8);addMessage('赛区动态',`${rival.name} 正在研究你的战术，下一次交手会更加困难。`,messageClock())}if(w%4===0){state.content.goals={training:0,media:0,win:0};addMessage('新月度目标','新的经营目标已生成：提升训练质量、扩大影响力并争取一场胜利。',messageClock())}storySave()}
+function contentGoals(){ensureContentPack();const g=state.content.goals;return `<section class="card content-goals"><div class="card-head"><h2>赛季目标</h2><span class="badge">自动追踪</span></div><div class="content-goal-row"><span>训练与复盘</span><b>${g.training}/3</b><div class="bar"><em style="width:${Math.min(100,g.training/3*100)}%"></em></div></div><div class="content-goal-row"><span>媒体影响力</span><b>${g.media}/2</b><div class="bar"><em style="width:${Math.min(100,g.media/2*100)}%"></em></div></div><div class="content-goal-row"><span>正式比赛胜利</span><b>${g.win}/1</b><div class="bar"><em style="width:${Math.min(100,g.win*100)}%"></em></div></div></section>`}
+function contentRivals(){ensureContentPack();return `<section class="card"><div class="card-head"><h2>竞争对手情报</h2><span class="muted">动态更新</span></div>${state.rivals.slice(0,3).map(r=>`<div class="content-rival"><div><b>${r.name}</b><small>${r.region} · ${r.style}</small></div><span class="badge">强度 ${r.base+Math.min(5,r.trust)}</span></div>`).join('')}</section>`}
+function contentNewsPanel(){ensureContentPack();const i=state.content.incidents[0],m=state.content.media[0];return `<section class="card"><div class="card-head"><h2>俱乐部动态</h2><span class="tag">LIVE</span></div>${i?`<div class="news"><b>${i.title}</b><small>${i.body} · ${i.effect}</small></div>`:''}${m?`<div class="news"><b>${m.title}</b><small>${m.body}</small></div>`:''}<div class="news"><b>当前关注度</b><small>${state.fans||0} 粉丝 · 声望 ${state.reputation||0}</small></div></section>`}
+const oldAdvanceWithContent=advanceWeek;
+advanceWeek=function(){oldAdvanceWithContent();contentWeeklyTick();const g=state.content.goals;g.training=Math.min(3,g.training+1);if((state.fans||0)>0)g.media=Math.min(2,g.media+((state.week||1)%2===0?1:0));if((state.wins||0)>0)g.win=1;storySave();render()};
+const oldStoryDashboardWithContent=storyDashboard;
+storyDashboard=function(){const html=oldStoryDashboardWithContent();return html+`<div class="grid columns content-expansion-grid">${contentGoals()}${contentNewsPanel()}${contentRivals()}</div>`};
+ensureContentPack();contentWeeklyTick();render();
