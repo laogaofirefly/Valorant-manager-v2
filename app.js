@@ -925,7 +925,7 @@ ensureGameplayExpansion();if(!state.weeklyContract)resetWeeklyExpansion();render
  if(typeof oldMissionTrain==='function')window.trainPlayerStat=function(){const before=state.actions||0;oldMissionTrain.apply(this,arguments);if((state.actions||0)<before)state.taskStats.training++;storySave()};
  const oldMissionFinish=window.finishLiveMatch;
  if(typeof oldMissionFinish==='function')window.finishLiveMatch=function(){const before=state.wins||0;oldMissionFinish.apply(this,arguments);if((state.wins||0)>before)state.taskStats.wins++};
- ensureTasks();
+ if(typeof ensureTasks==="function")ensureTasks();
 })();// VOLT 1.0 polish: release badge, safe local saves, shortcuts, and a compact changelog panel.
 (function(){
  const VERSION='1.0.0';
