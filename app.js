@@ -959,4 +959,23 @@ ensureGameplayExpansion();if(!state.weeklyContract)resetWeeklyExpansion();render
   if(html.includes('data-delete-career'))return html;
   return html.replace('</p></section></div>','</p><div class="settings-danger"><button class="btn danger" data-delete-career>删除当前生涯</button></div></section></div>');
  };
+})();// Profile area hotfix: rebuild the sidebar profile after every render and use a real button.
+(function(){
+ function esc(v){return String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'"')}
+ window.refreshManagerProfile=function(){
+  const el=document.querySelector('.user');
+  if(!el)return;
+  ensureStory();
+  const name=(state.playerName||'').trim()||'未命名经理';
+  const division=state.division||'新秀经理';
+  el.innerHTML=`<div class="avatar" aria-hidden="true">${esc(name.slice(0,1).toUpperCase())}</div><div class="profile-copy"><b>经理 ${esc(name)}</b><small>${esc(division)}</small></div><button type="button" class="profile-settings" data-open-settings aria-label="打开设置" title="设置">⚙</button>`;
+  el.removeAttribute('role');
+ }
+ const previousRenderProfileHotfix=render;
+ render=function(){previousRenderProfileHotfix();refreshManagerProfile()};
+ document.addEventListener('click',function(e){
+  const btn=e.target.closest('[data-open-settings]');
+  if(btn){e.preventDefault();e.stopPropagation();openSettings();}
+ },true);
+ setTimeout(refreshManagerProfile,0);
 })();
