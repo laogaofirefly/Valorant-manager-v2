@@ -4,3 +4,4 @@
 .portrait.mini{width:32px;height:32px;font-size:14px;display:flex;align-items:center;justify-content:center;flex:none}
 .portrait.mini{width:32px;height:32px;font-size:14px;display:flex;align-items:center;justify-content:center;flex:none}
 .portrait.mini{width:32px;height:32px;font-size:14px;display:flex;align-items:center;justify-content:center;flex:none}
+.player{position:relative}.potential{margin-left:auto;color:#ffd166;font-weight:900;font-size:18px}.player-data{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin:14px 0;padding:10px 0;border-top:1px solid #29344b;border-bottom:1px solid #29344b}.player-data span{font-size:10px;color:#8f9bb5}.player-data b{display:block;color:#eaf0ff;font-size:13px;margin-top:2px}.player-foot{display:flex;align-items:center;justify-content:space-between}
