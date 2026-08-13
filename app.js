@@ -965,11 +965,27 @@ ensureGameplayExpansion();if(!state.weeklyContract)resetWeeklyExpansion();render
  }
  function enterGame(fresh){document.getElementById(rootId)?.remove();document.querySelectorAll('#volt-main-menu').forEach(x=>x.remove());document.body.classList.remove('menu-open');if(shell){shell.hidden=false;shell.removeAttribute('aria-hidden')}if(fresh){ensureStory();state.page='dashboard';state.storyFlags=state.storyFlags||{};state.storyFlags.intro=false}render();refreshManagerProfile?.()}
  window.voltShowStartPage=startScreen;
- // Rebuild after browser bfcache restores the SPA on a second visit.
+ // Rebuild safely after browser bfcache restores the SPA. Do not reopen the launcher on every visibility change.
  let launcherTimer=0;
- function scheduleLauncher(){clearTimeout(launcherTimer);launcherTimer=setTimeout(startScreen,60)}
+ let launcherBooted=false;
+ function restoreGameAfterBFCache(){
+  clearTimeout(launcherTimer);
+  document.getElementById(rootId)?.remove();
+  document.querySelectorAll('#volt-main-menu').forEach(x=>x.remove());
+  document.body.classList.remove('menu-open');
+  if(shell){shell.hidden=false;shell.removeAttribute('aria-hidden')}
+  render();
+  refreshManagerProfile?.();
+ }
+ function scheduleLauncher(event){
+  clearTimeout(launcherTimer);
+  if(event?.persisted){launcherTimer=setTimeout(restoreGameAfterBFCache,0);return}
+  if(launcherBooted)return;
+  launcherBooted=true;
+  launcherTimer=setTimeout(startScreen,60);
+ }
  window.addEventListener('pageshow',scheduleLauncher);
- window.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')scheduleLauncher()});
+ // visibilitychange is intentionally not used to launch the menu: switching apps must not destroy the current view.
  scheduleLauncher();
 })();
 // Match center UX upgrade: live tournament board, round timeline and readable tactical controls.
