@@ -610,4 +610,12 @@ sign=function(name){ensureStory();const p=players.find(x=>x[0]===name);if(!p)ret
 // Clarify that these are estimates rather than official disclosed transaction amounts.
 const oldProgressionRosterNote=roster;
 roster=function(){return oldProgressionRosterNote().replace('综合评分、合同价格与现实竞技水平挂钩；高水平选手身价更高。','转会费采用公开市场信息与竞技水平估算；官方通常不会完整公开交易金额，实际合同可能不同。')};
+render();// Make the market card display use the same realistic fee as the signing action.
+const rosterWithOldPrices=roster;
+roster=function(){
+ const q=state.rosterQuery||'',region=state.rosterRegion||'全部',role=state.rosterRole||'全部';
+ const visible=players.filter(p=>(!q||p.join(' ').toLowerCase().includes(q.toLowerCase()))&&(region==='全部'||p[4]===region)&&(role==='全部'||p[2].includes(role)));
+ let index=0,html=rosterWithOldPrices();
+ return html.replace(/(?:转会费 ¥[0-9,]+ · 月薪 ¥[0-9,]+|¥[0-9,]+ \/ 年)/g,()=>{const p=visible[index++];return p?transferFeeText(p):''});
+};
 render();
