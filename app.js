@@ -618,4 +618,15 @@ roster=function(){
  let index=0,html=rosterWithOldPrices();
  return html.replace(/(?:转会费 ¥[0-9,]+ · 月薪 ¥[0-9,]+|¥[0-9,]+ \/ 年)/g,()=>{const p=visible[index++];return p?transferFeeText(p):''});
 };
-render();
+render();// Message center reliability fixes: unread badge, persistence, and safe message row updates.
+function messageUnreadCount(){return (state.messages||[]).filter(m=>!m.read).length}
+function updateNotifyBadge(){const n=document.querySelector('.notify');if(!n)return;n.innerHTML=`♧<sup>${messageUnreadCount()}</sup>`;n.setAttribute('aria-label',`消息中心，${messageUnreadCount()} 条未读`)}
+function inboxPanel(){const messages=state.messages||[];return `<div class="inbox-layer" id="inbox-layer" role="dialog" aria-label="消息中心"><div class="inbox-head"><h2>消息中心</h2><button class="btn alt" onclick="markMessagesRead()">全部已读</button><button class="close-inbox" aria-label="关闭消息中心" onclick="closeInbox()">×</button></div><div class="inbox-count">${messageUnreadCount()} 条未读消息</div><div class="inbox-list">${messages.length?messages.map(x=>`<button class="message-item ${x.read?'read':''}" data-message-id="${x.id}" onclick="openMessage(${Number(x.id)})"><span class="message-dot"></span><div><b>${x.title}</b><small>${x.body}</small><em>${x.time}</em></div></button>`).join(''):'<div class="empty">暂无消息</div>'}</div></div>`}
+function openInbox(){closeInbox();const layer=document.createElement('div');layer.innerHTML=inboxPanel();document.body.appendChild(layer.firstElementChild);updateNotifyBadge()}
+function closeInbox(){document.querySelector('#inbox-layer')?.remove()}
+function openMessage(id){const m=(state.messages||[]).find(x=>String(x.id)===String(id));if(!m)return;m.read=true;storySave();const item=document.querySelector(`#inbox-layer .message-item[data-message-id="${CSS.escape(String(id))}"]`);item?.classList.add('read');const count=document.querySelector('#inbox-layer .inbox-count');if(count)count.textContent=`${messageUnreadCount()} 条未读消息`;updateNotifyBadge();toast(`${m.title}：${m.body}`)}
+function markMessagesRead(){(state.messages||[]).forEach(x=>x.read=true);storySave();document.querySelectorAll('#inbox-layer .message-item').forEach(x=>x.classList.add('read'));const c=document.querySelector('#inbox-layer .inbox-count');if(c)c.textContent='0 条未读消息';updateNotifyBadge();toast('消息已全部标记为已读')}
+function bindMessageCenter(){const notify=document.querySelector('.notify');if(notify)notify.onclick=openInbox;updateNotifyBadge()}
+const oldRenderForMessages=render;render=function(){oldRenderForMessages();bindMessageCenter()};
+// Rebind once immediately for pages rendered before this patch.
+bindMessageCenter();
