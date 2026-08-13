@@ -1025,6 +1025,10 @@ ensureGameplayExpansion();if(!state.weeklyContract)resetWeeklyExpansion();render
  }
  function enterGame(fresh){document.getElementById(rootId)?.remove();document.querySelectorAll('#volt-main-menu').forEach(x=>x.remove());document.body.classList.remove('menu-open');if(shell){shell.hidden=false;shell.removeAttribute('aria-hidden')}if(fresh){ensureStory();state.page='dashboard';state.storyFlags=state.storyFlags||{};state.storyFlags.intro=false}render();refreshManagerProfile?.()}
  window.voltShowStartPage=startScreen;
- // Run last, after historical timers and render wrappers have finished.
- setTimeout(startScreen,250);
+ // Rebuild after browser bfcache restores the SPA on a second visit.
+ let launcherTimer=0;
+ function scheduleLauncher(){clearTimeout(launcherTimer);launcherTimer=setTimeout(startScreen,60)}
+ window.addEventListener('pageshow',scheduleLauncher);
+ window.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')scheduleLauncher()});
+ scheduleLauncher();
 })();
