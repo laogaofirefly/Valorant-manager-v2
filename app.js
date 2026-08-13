@@ -1110,3 +1110,27 @@ const oldGScene=storyDashboard;storyDashboard=function(){return oldGScene()+scen
  if(oldCoachPanel)window.coachPanel=function(){init();return oldCoachPanel()+`<div class="coach-payroll"><span>本月教练工资</span><b>¥${payroll().toLocaleString()}</b><small>每月结算 · 计划每周限一次 · 已完成会议 ${state.coaching.meetings} 次</small></div>`};
  init();
 })();
+
+// Manual lineup management: the player decides the starting five and bench order.
+(function(){
+ function init(){
+  state.signed=Array.isArray(state.signed)?state.signed:[];
+  if(!Array.isArray(state.startingLineup))state.startingLineup=state.signed.slice(0,5);
+  state.startingLineup=state.startingLineup.filter(id=>state.signed.includes(id)).slice(0,5);
+  state.signed.forEach(id=>{if(state.startingLineup.length<5&&!state.startingLineup.includes(id))state.startingLineup.push(id)});
+ }
+ window.getStartingLineup=function(){init();return state.startingLineup.slice()};
+ window.setStarter=function(id){init();if(!state.signed.includes(id))return toast('该选手不在合同阵容中');if(state.startingLineup.includes(id))return toast('该选手已经是首发');if(state.startingLineup.length>=5)return toast('首发已满，请先将一名选手移至替补');state.startingLineup.push(id);storySave();toast(id+' 已进入首发阵容');render()};
+ window.setBench=function(id){init();if(!state.startingLineup.includes(id))return toast('该选手已经是替补');if(state.startingLineup.length<=5)return toast('首发必须保持 5 人');state.startingLineup=state.startingLineup.filter(x=>x!==id);storySave();toast(id+' 已移至替补');render()};
+ window.swapLineup=function(outId,inId){init();if(!state.startingLineup.includes(outId)||!state.signed.includes(inId))return;if(state.startingLineup.includes(inId))return toast('两名选手已经都在首发');const i=state.startingLineup.indexOf(outId);state.startingLineup[i]=inId;storySave();toast(inId+' 替换 '+outId+' 进入首发');render()};
+ function lineupPanel(){init();const starters=state.startingLineup,bench=state.signed.filter(id=>!starters.includes(id));const row=(id,i,active)=>{const p=players.find(x=>x[0]===id);return `<div class="lineup-row ${active?'is-starter':'is-bench'}"><span class="lineup-index">${active?(i+1):'替补'}</span><div><b>${id}</b><small>${p?p[1]+' · '+p[2]:'已注册选手'}</small></div>${active?`<select onchange="swapLineup('${id}',this.value)"><option value="">替换为替补</option>${bench.map(x=>`<option value="${x}">${x}</option>`).join('')}</select>`:`<button class="btn alt" onclick="setStarter('${id}')">设为首发</button>`}</div>`};return `<section class="card wide lineup-manager"><div class="card-head"><h2>首发阵容管理</h2><span class="badge">${starters.length}/5 首发 · ${bench.length} 替补</span></div><p class="muted">由你决定每场比赛的五人首发。替补不会消失，比赛前可以随时轮换。</p><div class="lineup-list">${starters.map((id,i)=>row(id,i,true)).join('')||'<div class="empty">暂无首发选手</div>'}</div>${bench.length?`<div class="bench-title">替补席</div><div class="lineup-list">${bench.map(id=>row(id,0,false)).join('')}</div>`:''}</section>`}
+ const oldClub=club;club=function(){init();return oldClub()+lineupPanel()};
+ const oldRoster=roster;roster=function(){init();return oldRoster()+lineupPanel()};
+ const oldRelease=window.releasePlayer;
+ if(oldRelease)window.releasePlayer=function(id){init();if(state.startingLineup.includes(id)&&state.startingLineup.length<=5)return toast('请先把该选手替换下首发');oldRelease(id);state.startingLineup=state.startingLineup.filter(x=>x!==id);storySave();render()};
+ const oldTeamRating=window.vctTeamRating;
+ if(oldTeamRating)window.vctTeamRating=function(){init();const ids=state.startingLineup;if(ids.length<5)return 45;return ids.reduce((sum,id)=>{const p=players.find(x=>x[0]===id);return sum+(state.playerRatings?.[id]||playerRating(p)||60)},0)/ids.length};
+ const oldStart=window.startLiveMatch;
+ if(oldStart)window.startLiveMatch=function(){init();if(state.startingLineup.length<5)return toast('请先配置完整的 5 人首发阵容');return oldStart()};
+ init();
+})();
