@@ -938,4 +938,17 @@ ensureGameplayExpansion();if(!state.weeklyContract)resetWeeklyExpansion();render
  window.restoreV10Backup=function(){try{const raw=localStorage.getItem('volt-save-backup');if(!raw)return toast('没有可恢复的备份');localStorage.setItem('volt-save',raw);location.reload()}catch(e){toast('备份恢复失败')}};
  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&document.getElementById('volt-main-menu'))closeMainMenu();if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault();storySave();toast('进度已保存')}});
  setTimeout(()=>{ensureStory();ensureTasks();},0);
+})();// v1.0.1 bug fixes: startup menu, complete save deletion, and manager settings interaction.
+(function(){
+ const SAVE_KEYS=['volt-save','volt-save-backup'];
+ function removeAllSaves(){SAVE_KEYS.forEach(k=>{try{localStorage.removeItem(k)}catch(e){}});try{sessionStorage.setItem('volt-open-fresh','1')}catch(e){}}
+ function consumeFreshStart(){try{if(sessionStorage.getItem('volt-open-fresh')==='1'){SAVE_KEYS.forEach(k=>localStorage.removeItem(k));sessionStorage.removeItem('volt-open-fresh');return true}}catch(e){}return false}
+ window.deleteCareer=function(){if(!confirm('确定删除当前生涯、备份并返回主菜单吗？此操作不可撤销。'))return;removeAllSaves();toast('生涯存档已删除');setTimeout(()=>location.reload(),180)};
+ window.newMainCareer=function(){if(hasSave()&&!confirm('确定要删除当前生涯并开始新游戏吗？'))return;removeAllSaves();location.reload()};
+ document.addEventListener('click',e=>{const settings=e.target.closest('.profile-settings');if(settings){e.preventDefault();e.stopPropagation();openSettings();return}if(e.target.closest('[data-delete-career]')){e.preventDefault();deleteCareer()}} ,true);
+ const originalSettingsPanel=settingsPanel;
+ settingsPanel=function(){return originalSettingsPanel().replace('</div></section></div>','<div class="settings-danger"><button class="btn danger" data-delete-career>删除当前生涯</button></div></div></section></div>')};
+ // Always expose the launcher first; the player chooses Continue or New Game.
+ const fresh=consumeFreshStart();
+ setTimeout(()=>{if(fresh||document.getElementById('page'))openMainMenu()},80);
 })();
