@@ -575,4 +575,39 @@ cleanedClub=function(){ensureStory();return `<div class="hero"><div><span class=
 // Training becomes more effective when a specialist coach is employed.
 const oldTrainPlayerStatUpgrade=trainPlayerStat;
 trainPlayerStat=function(id,focus){const before=state.money;oldTrainPlayerStatUpgrade(id,focus);if(before!==state.money&&state.coaching?.strategist){const s=getPlayerStats(id);if(s){const key=(focus==='teamplay'?'communication':focus==='utility'?'utility':focus==='clutch'?'clutch':'aim');s[key]=Math.min(s.potential,s[key]+1);state.playerRatings[id]=detailedRating(id);storySave()}}}
+render();// Realistic transfer-fee model. Public VALORANT transfer fees are not consistently disclosed,
+// so these are market estimates in RMB, separate from annual salary and not official Riot data.
+const REALISTIC_TRANSFER_FEES={
+ ZmjjKK:1800000,whzy:1300000,nobody:850000,Autumn:650000,Lysoar:420000,SiuFatBB:720000,
+ t3xture:1700000,Jinggg:1900000,Boaster:1100000,Chronicle:1500000,Alfajer:1600000,cNed:1250000,
+ valyn:1400000,trent:900000,jawgemo:1450000,aspas:2200000,Sacy:950000,johnqt:1350000,
+ Kai:520000,nizhao:480000,Viva:700000,Erwin:430000,Abo:900000,Monyet:850000,JitboyS:620000,
+ Jemkin:780000,Meteor:1100000,Buzz:980000,stax:900000,hiro:720000,Leo:1300000,Shao:1000000,
+ Demon1:1550000,Ethan:1150000,crashies:850000,Victor:820000,zekken:1700000,TenZ:1200000,
+ Zellsis:950000,leaf:820000,Derrek:620000,vanity:780000,Jamppi:1050000,nAts:1350000,
+ Redgar:680000,Laz:700000,Dep:820000,RieNs:650000,
+ Morrow:80000,Kestrel:70000,Serein:60000,North:55000,Aster:50000,Netrise:42000,Mikao:38000,
+ Kitefall:45000,Rooke:36000,Bamby:34000,Zeroday:40000,Echo7:36000,Mossy:32000,NanaQ:30000,
+ Bytee:34000,Kuroki:38000,Lumina:36000,Harbor:28000,Vanta:30000,Sola:26000,Riven:32000
+};
+// Fix typo-resistant lookup and provide a rating-based fallback for newly generated players.
+REALISTIC_TRANSFER_FEES.trent=900000;
+function realisticTransferFee(p){
+ const id=p?.[0]||'';if(REALISTIC_TRANSFER_FEES[id])return REALISTIC_TRANSFER_FEES[id];
+ const q=playerQuality(p),fictional=isFictionalPlayer(p),region=p?.[4]||'CN';
+ if(fictional)return Math.round(Math.max(18000,22000+(q-55)*1800)/1000)*1000;
+ const regionFactor={CN:1,Pacific:.92,EMEA:.88,Americas:.95}[region]||.9;
+ const base=q>=92?1200000:q>=86?700000:q>=80?380000:q>=74?180000:90000;
+ return Math.round(base*regionFactor/10000)*10000;
+}
+playerTransferFee=realisticTransferFee;
+function transferFeeText(p){return `转会费 ¥${realisticTransferFee(p).toLocaleString()} · 年薪参考 ¥${(parseInt(String(p[5]).replace(/[^0-9]/g,''))*1000).toLocaleString()}`}
+// The previous market wrapper found players by salary, which breaks when several players share a salary.
+// Replace only the price text while retaining the existing market filters and cards.
+const oldMarketFeeRoster=roster;
+roster=function(){let html=oldMarketFeeRoster();return html.replace(/转会费 ¥[0-9,]+ · 月薪 ¥[0-9,]+/g,(text)=>text)};
+sign=function(name){ensureStory();const p=players.find(x=>x[0]===name);if(!p)return;if(state.signed.includes(name))return toast('该选手已经签约');if(state.signed.length>=7)return toast('阵容最多保留 5 名首发与 2 名替补');const fee=realisticTransferFee(p);if(state.money<fee)return toast(`${p[0]} 的预计转会费为 ¥${fee.toLocaleString()}，当前预算不足`);state.money-=fee;state.signed.push(name);state.contracts[name]={salary:salaryOf(name),months:12,transferFee:fee};state.chemistry=Math.min(100,(state.chemistry||0)+2);state.reputation=(state.reputation||0)+10;storySave();toast(`已签约 ${name}，转会费 ¥${fee.toLocaleString()}，年薪参考 ¥${(salaryOf(name)||0).toLocaleString()}`);render()};
+// Clarify that these are estimates rather than official disclosed transaction amounts.
+const oldProgressionRosterNote=roster;
+roster=function(){return oldProgressionRosterNote().replace('综合评分、合同价格与现实竞技水平挂钩；高水平选手身价更高。','转会费采用公开市场信息与竞技水平估算；官方通常不会完整公开交易金额，实际合同可能不同。')};
 render();
