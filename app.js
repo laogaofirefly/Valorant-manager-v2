@@ -1065,3 +1065,19 @@ const oldGScene=storyDashboard;storyDashboard=function(){return oldGScene()+scen
  function panel(){init();const current=ARC.find(x=>x.week===(state.week||1)&&!state.narrative.seen.includes(x.id));if(current&&!state.narrative.pending){state.narrative.pending=current.id;state.narrative.chapter=current.chapter;storySave()}const e=ARC.find(x=>x.id===state.narrative.pending);const history=state.narrative.history.slice(0,3);return `<section class="card narrative-panel"><div class="card-head"><h2>战队纪事</h2><span class="tag">${state.narrative.chapter}</span></div>${e?`<div class="narrative-scene"><span class="eyebrow">第 ${e.week} 周 · ${e.chapter}</span><h3>${e.title}</h3><p>${e.text}</p><div class="narrative-choices"><button class="btn alt" onclick="chooseNarrative(0)">${e.a}</button><button class="btn alt" onclick="chooseNarrative(1)">${e.b}</button></div></div>`:'<p class="muted">本周没有新的主线事件。队员们正在为下一场比赛准备。</p>'}<div class="story-history"><b>最近决定</b>${history.length?history.map(h=>`<span>第 ${h.week} 周 · ${h.title}：${h.choice}</span>`).join(''):'<span>你的第一个决定即将到来。</span>'}</div></section>`}
  const base=storyDashboard;storyDashboard=function(){return base()+panel()};init();
 })();
+
+// Season challenge board: choose one contract each week and pursue a visible objective.
+(function(){
+ const POOLS=[
+  {id:'win',title:'赛场突破',desc:'赢下一场正式比赛',reward:18000,rep:8,check:s=>(s.wins||0)>=(s.challengeBoard.startWins||0)+1},
+  {id:'train',title:'训练成果',desc:'完成两次选手培养',reward:14000,rep:6,check:s=>(s.training?.sessions||0)>=(s.challengeBoard.startTraining||0)+2},
+  {id:'morale',title:'稳定军心',desc:'让士气保持在 75 以上',reward:11000,rep:5,check:s=>(s.morale||0)>=75},
+  {id:'scout',title:'情报优势',desc:'获得 2 点对手情报',reward:12000,rep:6,check:s=>(s.playHub?.intel||0)>=(s.challengeBoard.startIntel||0)+2},
+  {id:'fans',title:'扩大影响力',desc:'本周新增至少 100 名粉丝',reward:16000,rep:7,check:s=>(s.fans||0)>=(s.challengeBoard.startFans||0)+100}
+ ];
+ function init(){const b=state.challengeBoard;if(!b||b.week!==state.week){state.challengeBoard={week:state.week,selected:null,claimed:false,startWins:state.wins||0,startTraining:state.training?.sessions||0,startIntel:state.playHub?.intel||0,startFans:state.fans||0};}}
+ window.selectChallenge=function(id){init();if(state.challengeBoard.selected)return toast('本周已经选择了挑战合同');const c=POOLS.find(x=>x.id===id);if(!c)return;state.challengeBoard.selected=id;storySave();toast('已接受挑战：'+c.title);render()};
+ window.claimChallenge=function(){init();const b=state.challengeBoard,c=POOLS.find(x=>x.id===b.selected);if(!c||b.claimed)return;if(!c.check(state))return toast('挑战尚未完成，继续经营战队');b.claimed=true;state.money=(state.money||0)+c.reward;state.reputation=(state.reputation||0)+c.rep;addMessage('挑战合同完成',c.title+'完成，获得 ¥'+c.reward.toLocaleString()+' 与声望 +'+c.rep,messageClock());storySave();toast('挑战奖励已领取');render()};
+ function panel(){init();const b=state.challengeBoard,c=POOLS.find(x=>x.id===b.selected);const list=POOLS.slice(0,3);return `<section class="card challenge-board"><div class="card-head"><h2>本周挑战合同</h2><span class="badge">${b.selected?(b.claimed?'奖励已领取':'进行中'):'请选择一项'}</span></div><p class="muted">每周接受一份挑战合同。它会记录你接手时的状态，避免靠旧进度直接领奖。</p>${c?`<div class="challenge-active"><div><b>${c.title}</b><p>${c.desc} · 奖励 ¥${c.reward.toLocaleString()} · 声望 +${c.rep}</p></div><button class="btn alt" onclick="claimChallenge()" ${b.claimed?'disabled':''}>${b.claimed?'已领取':(c.check(state)?'领取奖励':'检查进度')}</button></div>`:`<div class="challenge-grid">${list.map(x=>`<div class="challenge-card"><b>${x.title}</b><p>${x.desc}</p><small>奖励 ¥${x.reward.toLocaleString()} · 声望 +${x.rep}</small><button class="btn alt" onclick="selectChallenge('${x.id}')">接受挑战</button></div>`).join('')}</div>`}</section>`}
+ const base=storyDashboard;storyDashboard=function(){return base()+panel()};init();
+})();
