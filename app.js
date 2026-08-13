@@ -1149,3 +1149,28 @@ const oldGScene=storyDashboard;storyDashboard=function(){return oldGScene()+scen
  const oldDashboard=dashboard;dashboard=function(){return oldDashboard()+panel()};
  init();
 })();
+
+// Branching story campaign: weekly narrative choices with persistent consequences.
+(function(){
+ const CHAPTERS=[
+  {id:'founder',week:2,title:'第一笔赌注',tag:'第一章 · 起点',text:'城市公开赛的报名截止就在今晚。报名费会让本月现金流变得紧张，但这是让战队被看见的最快机会。',choices:[
+   ['报名参赛',s=>{s.money=Math.max(0,(s.money||0)-18000);s.reputation=(s.reputation||0)+18;s.prep=Math.min(100,(s.prep||0)+8);return '支付报名费，战队获得了正式亮相的机会。'},'资金 -¥18,000 · 声望 +18 · 准备度 +8'],
+   ['先参加训练赛',s=>{s.chemistry=Math.min(100,(s.chemistry||0)+6);s.prep=Math.min(100,(s.prep||0)+12);return '你选择先磨合阵容，战队的配合变得更加稳定。'},'化学反应 +6 · 准备度 +12'] ]},
+  {id:'captain',week:5,title:'谁来指挥？',tag:'第二章 · 队伍的声音',text:'比赛前的战术会议陷入争论。队长希望获得更多决策权，而教练组认为统一指挥才能减少失误。',choices:[
+   ['让队长主导比赛',s=>{s.chemistry=Math.min(100,(s.chemistry||0)+8);s.morale=Math.min(100,(s.morale||0)+5);s.storyTrust=(s.storyTrust||0)+2;return '队员们感受到信任，队伍气氛明显改善。'},'化学反应 +8 · 士气 +5'],
+   ['坚持教练体系',s=>{s.prep=Math.min(100,(s.prep||0)+15);s.reputation=(s.reputation||0)+5;s.storyDiscipline=(s.storyDiscipline||0)+2;return '战术体系得到贯彻，所有人开始按同一套节奏执行。'},'准备度 +15 · 声望 +5'] ]},
+  {id:'offer',week:8,title:'离开的邀请',tag:'第三章 · 选择与代价',text:'一支更大的俱乐部向你的核心选手发出邀请。对方开出的转会费可以缓解财务压力，但也可能摧毁正在形成的阵容。',choices:[
+   ['接受转会',s=>{const id=(s.startingLineup||s.signed||[])[0];if(id){s.signed=s.signed.filter(x=>x!==id);s.startingLineup=(s.startingLineup||[]).filter(x=>x!==id);if(s.contracts)delete s.contracts[id]}s.money=(s.money||0)+90000;s.chemistry=Math.max(0,(s.chemistry||0)-12);s.reputation=(s.reputation||0)+12;return '你接受了报价，俱乐部获得喘息空间，但首发阵容需要重建。'},'资金 +¥90,000 · 化学反应 -12 · 失去一名核心选手'],
+   ['拒绝报价',s=>{s.morale=Math.min(100,(s.morale||0)+10);s.chemistry=Math.min(100,(s.chemistry||0)+5);s.reputation=(s.reputation||0)+8;return '你留下了核心选手，更衣室开始相信这支队伍真的有未来。'},'士气 +10 · 化学反应 +5 · 声望 +8'] ]},
+  {id:'final',week:12,title:'灯光之下',tag:'第四章 · 资格赛前夜',text:'资格赛前夜，官方采访邀请你发表宣言。你的发言会决定外界如何记住这支战队。',choices:[
+   ['“我们会赢”',s=>{s.reputation=(s.reputation||0)+25;s.fans=(s.fans||0)+220;s.morale=Math.min(100,(s.morale||0)+6);return '你的宣言登上了赛区热搜，所有人都在等待你们兑现承诺。'},'声望 +25 · 粉丝 +220 · 士气 +6'],
+   ['“我们会学习”',s=>{s.prep=Math.min(100,(s.prep||0)+18);s.fans=(s.fans||0)+80;s.chemistry=Math.min(100,(s.chemistry||0)+3);return '你把压力转化为专注，队伍安静地完成了最后一次复盘。'},'准备度 +18 · 粉丝 +80 · 化学反应 +3'] ]}
+ ];
+ function init(){ensureStory();state.branchStory=state.branchStory||{current:null,completed:[],history:[]};state.branchStory.completed=Array.isArray(state.branchStory.completed)?state.branchStory.completed:[];state.branchStory.history=Array.isArray(state.branchStory.history)?state.branchStory.history:[]}
+ function prepare(){init();const w=Number(state.week||1);if(state.branchStory.current)return;const c=CHAPTERS.find(x=>x.week===w&&!state.branchStory.completed.includes(x.id));if(c)state.branchStory.current={id:c.id,week:c.week,choice:null}}
+ window.resolveBranchStory=function(index){init();const b=state.branchStory.current,c=CHAPTERS.find(x=>x.id===b?.id);if(!c||b.choice!==null)return;if(!c.choices[index])return;const result=c.choices[index][1](state);b.choice=index;state.branchStory.completed.push(c.id);state.branchStory.history.unshift({id:c.id,week:c.week,title:c.title,choice:c.choices[index][0],result});state.branchStory.history=state.branchStory.history.slice(0,8);state.log=state.log||[];state.log.unshift('剧情选择：'+c.title+'｜'+c.choices[index][0]);storySave();toast(result);render()};
+ function panel(){init();prepare();const b=state.branchStory.current,c=CHAPTERS.find(x=>x.id===b?.id);return `<section class="card wide branch-story"><div class="card-head"><h2>主线剧情</h2><span class="badge">${c?(b.choice===null?'待决定':'已完成'):'等待下一章'}</span></div>${c?`<span class="eyebrow">${c.tag} · 第 ${c.week} 周</span><h3>${c.title}</h3><p class="story-text">${c.text}</p>${b.choice===null?`<div class="story-choices">${c.choices.map((x,i)=>`<button onclick="resolveBranchStory(${i})"><b>${x[0]}</b><small>${x[2]}</small></button>`).join('')}</div>`:`<div class="event-result">你选择了：${c.choices[b.choice][0]}<small>${state.branchStory.history[0]?.result||''}</small></div>`}`:'<p class="muted">新的章节将在关键周自动开启。你的选择会影响资金、阵容、士气与赛区声望。</p>'}<div class="story-history">${state.branchStory.history.slice(0,3).map(x=>`<div><b>第 ${x.week} 周 · ${x.title}</b><small>${x.choice}：${x.result}</small></div>`).join('')}</div></section>`}
+ const oldDash=dashboard;dashboard=function(){return oldDash()+panel()};
+ const oldAdvance=advanceWeek;advanceWeek=function(){oldAdvance();prepare();storySave();render()};
+ init();prepare();
+})();
