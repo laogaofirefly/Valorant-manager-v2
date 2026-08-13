@@ -1004,4 +1004,25 @@ ensureGameplayExpansion();if(!state.weeklyContract)resetWeeklyExpansion();render
   render();
  }
  setTimeout(function(){if(hasLaunchStory())showOpeningStory();else window.openMainMenu()},180);
+})();// Authoritative launcher: replaces the accumulated startup overrides with one deterministic flow.
+(function(){
+ const shell=document.querySelector('.app-shell');
+ const rootId='volt-authoritative-start';
+ function saved(){try{return !!localStorage.getItem('volt-save')}catch(e){return false}}
+ function removeSaves(){['volt-save','volt-save-backup'].forEach(k=>{try{localStorage.removeItem(k)}catch(e){}})}
+ function esc(v){return String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'"')}
+ function startScreen(){
+  document.getElementById(rootId)?.remove();
+  const has=saved();
+  const el=document.createElement('section');el.id=rootId;
+  el.innerHTML=`<div class="main-menu-bg"><div class="main-menu-grid"></div></div><div class="main-menu-content"><div class="main-menu-brand"><span class="main-menu-mark">V</span><div><b>VOLT</b><small>VALORANT MANAGER</small></div></div><div class="main-menu-kicker">VCT MANAGEMENT SIMULATION · CN</div><h2>你的战队，<em>你的时代。</em></h2><p class="main-menu-lead">从一间训练室开始，组建阵容、经营俱乐部、赢下比赛，向 VCT 世界舞台发起挑战。</p><div class="main-menu-actions"><button id="volt-continue" class="main-menu-btn primary" ${has?'':'hidden'}>继续生涯 <small>返回管理中心</small></button><button id="volt-new" class="main-menu-btn ${has?'':'primary'}">${has?'新建生涯':'开始游戏'}<small>${has?'清除当前进度':'创建你的第一支战队'}</small></button><button id="volt-about" class="main-menu-btn">游戏说明<small>了解玩法与目标</small></button></div><div class="main-menu-profile">${has?`<span>当前档案</span><b>${esc(state.clubName||'VOLT Academy')}</b><small>经理 ${esc(state.playerName||'未命名')} · ${esc(state.division||'次级联赛')} · 第 ${state.week||1} 周</small>`:'<span>新赛季即将开始</span><b>BUILD YOUR LEGACY</b><small>管理 · 训练 · 对战 · 剧情</small>'}</div><div class="main-menu-footer"><span>VOLT // 1.0</span><span>本地存档 · 离线可玩</span></div></div>`;
+  document.body.appendChild(el);document.body.classList.add('menu-open');if(shell)shell.hidden=true;
+  el.querySelector('#volt-continue')?.addEventListener('click',()=>enterGame(false));
+  el.querySelector('#volt-new').addEventListener('click',()=>{if(has&&!confirm('确定删除当前生涯并开始新游戏吗？'))return;removeSaves();enterGame(true)});
+  el.querySelector('#volt-about').addEventListener('click',()=>{const p=el.querySelector('.main-menu-profile');p.innerHTML='<span>游戏目标</span><b>从网吧赛打进 VCT CN</b><small>签约选手 · 选择剧情 · 管理资金 · 参加 BO3 对战 · 建设你的俱乐部</small>'});
+ }
+ function enterGame(fresh){document.getElementById(rootId)?.remove();document.body.classList.remove('menu-open');if(shell)shell.hidden=false;if(fresh){ensureStory();state.page='dashboard';state.storyFlags=state.storyFlags||{};state.storyFlags.intro=false}render();refreshManagerProfile?.()}
+ window.voltShowStartPage=startScreen;
+ // Run last, after historical timers and render wrappers have finished.
+ setTimeout(startScreen,250);
 })();
