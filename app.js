@@ -65,8 +65,8 @@ function finishLiveMatch(){const m=state.liveMatch;if(!m)return;const won=m.scor
 function closeLiveMatch(){document.querySelector('#live-match')?.remove()}
 
 // Dedicated team page. The game starts with an empty roster.
-const starterIds=['nobody','Autumn','Lysoar','Kai','Viva'];
-if(starterIds.length===state.signed.length && starterIds.every((n,i)=>state.signed[i]===n)){state.signed=[];gameplaySave()}
+// v1.0.2: starter five are granted by the career flow, never removed on startup.
+const starterIds=['Morrow','Kestrel','Serein','North','Aster'];
 club=function(){const names=state.signed.slice(0,5);let rows=names.map((n,i)=>{const x=players.find(v=>v[0]===n);return '<div class="tactic"><div><b>'+(i+1)+'. '+n+'</b><small>'+(x?x[1]+' · '+x[2]:'已注册选手')+'</small></div><button class="btn alt" onclick="releasePlayer(\''+n+'\')">释放</button></div>'}).join('');return '<div class="hero"><div><span class="eyebrow">VOLT ACADEMY · TEAM HUB</span><h2>我的战队</h2><p>这里是你的独立战队页面。签约选手后，他们会出现在本页面。</p></div><button class="btn" onclick="goRoster()">前往选手市场</button></div><div class="grid columns"><section class="card wide"><div class="card-head"><h2>首发阵容</h2><span class="badge">'+names.length+'/5</span></div>'+(rows||'<div class="empty">暂无战队选手。前往选手市场发起洽谈，组建你的首发阵容。</div>')+'</section><section class="card"><div class="card-head"><h2>战队状态</h2><span class="tag">SEASON</span></div><div class="tactic"><b>阵容人数</b><span class="trend">'+names.length+' / 5</span></div><div class="tactic"><b>比赛战绩</b><span class="trend">'+(state.wins||0)+' - '+(state.losses||0)+'</span></div><div class="tactic"><b>化学反应</b><span class="trend">'+(state.chemistry||0)+'%</span></div></section></div>'};render();
 
 // Individual scouting attributes for every player.
@@ -438,7 +438,7 @@ LOWER_LEAGUES.push(
  {id:'vct',name:'VCT CN',division:'VCT CN',format:'官方 BO3 常规赛 + 季后赛',teams:12,required:1600,bonus:250000,rep:300,authentic:true}
 );
 function progressionLabel(){return currentLeague().division}
-function beginStoryProgression(name){name=(name||'').trim();if(!name)return toast('请输入你的名字');ensureStory();state.playerName=name;state.clubName=name+'电竞';state.division='网吧赛';state.leagueIndex=0;state.leagueSeason={played:0,wins:0,losses:0,points:0};state.month=1;state.week=1;state.money=1000000;state.signed=[];state.contracts={};state.monthlyRent=30000;state.sponsorIncome=0;state.sponsors=[];state.storyFlags.intro=true;state.reputation=100;state.chemistry=35;state.prep=0;state.morale=70;storySave();toast('战队成立，网吧赛之旅开始');render()}
+function beginStoryProgression(name){name=(name||'').trim();if(!name)return toast('请输入你的名字');ensureStory();state.playerName=name;state.clubName=name+'电竞';state.division='网吧赛';state.leagueIndex=0;state.leagueSeason={played:0,wins:0,losses:0,points:0};state.month=1;state.week=1;state.money=1000000;state.signed=starterIds.slice();state.contracts=Object.fromEntries(starterIds.map(id=>[id,{salary:salaryOf(id),months:12}]));state.startingRosterGranted=true;state.monthlyRent=30000;state.sponsorIncome=0;state.sponsors=[];state.storyFlags.intro=true;state.reputation=100;state.chemistry=35;state.prep=0;state.morale=70;storySave();toast('战队成立，网吧赛之旅开始');render()}
 beginStory=beginStoryProgression;
 function availablePlayerProgression(p){ensureLowerLeagues();if(!p)return false;const authentic=state.leagueIndex>=2;return authentic?!isFictionalPlayer(p):isFictionalPlayer(p)}
 availablePlayer=availablePlayerProgression;
@@ -464,6 +464,8 @@ const fictionalIdMigration={netR:'Netrise',Mika:'Mikao',Kite:'Kitefall',Rook:'Ro
 if(state.signed)state.signed=state.signed.map(id=>fictionalIdMigration[id]||id);
 if(state.contracts){Object.entries(fictionalIdMigration).forEach(([oldId,newId])=>{if(state.contracts[oldId]&&!state.contracts[newId]){state.contracts[newId]=state.contracts[oldId];delete state.contracts[oldId]}})}
 if(state.playerRatings){Object.entries(fictionalIdMigration).forEach(([oldId,newId])=>{if(state.playerRatings[oldId]!==undefined&&state.playerRatings[newId]===undefined){state.playerRatings[newId]=state.playerRatings[oldId];delete state.playerRatings[oldId]}})}
+// Repair careers created by the broken empty-roster build: grant the original five once.
+if(state.storyFlags?.intro && (!state.signed||state.signed.length===0) && !state.startingRosterGranted){state.signed=['Morrow','Kestrel','Serein','North','Aster'];state.contracts=state.contracts||{};state.signed.forEach(id=>{state.contracts[id]=state.contracts[id]||{salary:salaryOf(id),months:12}});state.startingRosterGranted=true;try{storySave()}catch(e){}}
 function fictionalMarketDescription(){return '网吧赛与地区小型赛选手均为虚构角色，姓名、ID、队伍和履历均为本游戏原创设定。'}
 const oldRosterIdentity=roster;
 roster=function(){return oldRosterIdentity().replace('综合评分、合同价格与现实竞技水平挂钩；高水平选手身价更高。',''+fictionalMarketDescription()+' 评分和身价随赛事级别逐步提升。')};
