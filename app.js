@@ -282,4 +282,14 @@ const oldPlayerStatsSave=typeof storySave==='function'?storySave:null;
 function savePlayerStats(){ensurePlayerStats();state.playerRatings=state.playerRatings||{};(state.signed||[]).forEach(id=>state.playerRatings[id]=detailedRating(id));if(oldPlayerStatsSave)oldPlayerStatsSave();else if(typeof save==='function')save()}
 const oldClubDetailed=club;club=function(){ensurePlayerStats();return `<div class="hero"><div><span class="eyebrow">TEAM HUB · PLAYER DEVELOPMENT</span><h2>我的战队</h2><p>查看已签约选手的完整能力面板，并通过训练持续培养他们。</p></div><button class="btn" onclick="goRoster()">前往选手市场</button></div>${signedPlayersPanel()}<div class="grid columns"><section class="card"><div class="card-head"><h2>战队状态</h2><span class="tag">SEASON</span></div><div class="tactic"><b>阵容人数</b><span class="trend">${(state.signed||[]).length} / 5</span></div><div class="tactic"><b>平均综合评分</b><span class="trend">${state.signed?.length?Math.round(state.signed.reduce((a,id)=>a+detailedRating(id),0)/state.signed.length):0}</span></div><div class="tactic"><b>化学反应</b><span class="trend">${state.chemistry||0}%</span></div></section><section class="card"><div class="card-head"><h2>管理</h2></div><button class="btn alt" onclick="goTactics()">进入专项训练</button></section></div>`};
 const oldTacticsDetailed=tactics;tactics=function(){return `<div class="hero"><div><span class="eyebrow">TRAINING LAB · PLAYER DEVELOPMENT</span><h2>训练与战术实验室</h2><p>根据选手定位安排专项训练，提升枪法、道具、残局和团队能力。</p></div></div>${detailedTrainingPanel()}${typeof trainingPanel==='function'?trainingPanel():''}`};
-ensurePlayerStats();savePlayerStats();render();
+ensurePlayerStats();savePlayerStats();render();// Local save management and replay/reset support.
+function hasLocalSave(){return !!localStorage.getItem('volt-save')}
+function replayGame(){
+ if(!hasLocalSave())return toast('当前没有可删除的本地存档');
+ if(!confirm('确定要重玩吗？这将删除本设备上的 VOLT 存档，当前进度无法恢复。'))return;
+ localStorage.removeItem('volt-save');
+ sessionStorage.removeItem('volt-replay-confirmed');
+ location.reload();
+}
+function saveStatusPanel(){return `<section class="card wide"><div class="card-head"><h2>本地存档</h2><span class="badge">${hasLocalSave()?'已保存':'未创建'}</span></div><p class="muted">游戏进度保存在当前浏览器的本地存储中，不会自动上传到服务器。更换浏览器、清除网站数据或使用隐私模式可能导致存档丢失。</p><button class="btn alt" onclick="replayGame()">删除存档并重玩</button></section>`}
+const oldStoryDashboardReplay=storyDashboard;storyDashboard=function(){const html=oldStoryDashboardReplay();return html+saveStatusPanel()};
