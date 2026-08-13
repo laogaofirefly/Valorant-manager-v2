@@ -746,4 +746,17 @@ const advanceWeekExpansion2=advanceWeek;
 advanceWeek=function(){advanceWeekExpansion2();ensureExpansion2();checkMilestones();render()};
 const storyDashboardExpansion2=storyDashboard;
 storyDashboard=function(){return storyDashboardExpansion2()+facilitiesPanel()+`<div class="grid columns expansion2-grid">${fanPanel()}${milestonePanel()}</div>`};
-ensureExpansion2();checkMilestones();render();
+ensureExpansion2();checkMilestones();render();// Performance layer: coalesce repeated renders and avoid unnecessary DOM work.
+(function(){
+  const immediateRender=render;
+  let frame=0;
+  let queued=false;
+  let lastPage='';
+  render=function(){
+    if(queued)return;
+    queued=true;
+    const run=()=>{queued=false;frame=0;if(lastPage!==state.page||document.getElementById('page').childElementCount===0){lastPage=state.page;immediateRender()}else{immediateRender()}};
+    frame=window.requestAnimationFrame?requestAnimationFrame(run):setTimeout(run,0);
+  };
+  window.addEventListener('pagehide',()=>{if(frame){if(window.cancelAnimationFrame)cancelAnimationFrame(frame);else clearTimeout(frame);queued=false;frame=0;immediateRender()}});
+})();
