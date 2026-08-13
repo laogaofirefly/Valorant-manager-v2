@@ -361,4 +361,49 @@ function weeklyObjectivePanel(){
  const p=weeklyObjectiveProgress(),percent=Math.round(p.value/p.target*100);return `<section class="card weekly-objective"><div class="card-head"><h2>本周目标</h2><span class="badge">${o.claimed?'已领取':'进行中'}</span></div><div class="objective-current"><div><b>${o.title}</b><small>${o.desc}</small></div><strong>${p.value} / ${p.target}${o.type==='prep'?' 点':''}</strong></div><div class="bar objective-bar"><em style="width:${percent}%"></em></div>${p.done&&!o.claimed?`<button class="btn" onclick="claimWeeklyObjective()">领取 ¥${o.reward.toLocaleString()} + 声望</button>`:'<small class="muted">'+(o.claimed?'本周奖励已领取，下周会刷新新目标。':'完成目标后可以领取奖励。')+'</small>'}</section>`
 }
 const previousGuidedDashboardObjectives=guidedDashboard;
-guidedDashboard=function(){const html=previousGuidedDashboardObjectives();return html.replace('<div class="guide-flow">',weeklyObjectivePanel()+'<div class="guide-flow">')};
+guidedDashboard=function(){const html=previousGuidedDashboardObjectives();return html.replace('<div class="guide-flow">',weeklyObjectivePanel()+'<div class="guide-flow">')};// Rotating weekly events and milestones add meaningful choices beyond the main route.
+const CLUB_EVENTS=[
+ {id:'scrim',tag:'训练赛邀约',title:'一支强队邀请你打训练赛',desc:'对手实力很强，但这场训练赛可能暴露你的战术短板。',choices:[['接受挑战','prep',18,'准备度 +18，化学反应 +2'],['谨慎拒绝','morale',4,'士气 +4，避免额外风险']]},
+ {id:'star',tag:'选手新闻',title:'队内选手突然登上热门榜',desc:'媒体希望你安排一次采访。处理得好能提升战队声望，但会占用管理时间。',choices:[['安排采访','rep',35,'声望 +35，粉丝 +120'],['专注训练','skill',1,'准备度 +8，训练疲劳 +3']]},
+ {id:'sponsor',tag:'商业机会',title:'本地品牌提出短期合作',desc:'这不是一份大合同，但能缓解本月现金流压力。',choices:[['签下合作','money',28000,'获得 ¥28,000，声望 +8'],['保持独立','chem',4,'化学反应 +4，声望 +4']]},
+ {id:'roster',tag:'阵容管理',title:'替补选手对上场时间感到不满',desc:'你需要在成绩和队内公平之间做出选择。',choices:[['召开团队会议','morale',8,'士气 +8，化学反应 +3'],['承诺轮换制度','prep',10,'准备度 +10，但本周士气 -2']]},
+ {id:'patch',tag:'版本更新',title:'新版本改变了主流地图环境',desc:'教练组建议立刻调整训练重点。',choices:[['投入研究','prep',15,'准备度 +15，资金 -¥8,000'],['沿用旧体系','chem',2,'化学反应 +2，声望 -5']]}
+];
+function ensureClubEvent(){
+ ensureStory();
+ if(state.clubEvent&&state.clubEvent.week!==state.week)state.clubEvent=null;
+ if(!state.clubEvent){const e=CLUB_EVENTS[(Number(state.week||1)+Number(state.reputation||0))%CLUB_EVENTS.length];state.clubEvent={week:state.week,id:e.id,choice:null};storySave()}
+}
+function currentClubEvent(){ensureClubEvent();return CLUB_EVENTS.find(e=>e.id===state.clubEvent.id)||CLUB_EVENTS[0]}
+function resolveClubEvent(index){
+ ensureClubEvent();if(state.clubEvent.choice!==null)return toast('本周事件已经处理');const e=currentClubEvent(),c=e.choices[index];if(!c)return;
+ const kind=c[1],v=c[2];
+ if(kind==='prep')state.prep=Math.min(100,(state.prep||0)+v);
+ if(kind==='morale')state.morale=Math.max(0,Math.min(100,(state.morale||0)+v));
+ if(kind==='rep')state.reputation=(state.reputation||0)+v;
+ if(kind==='money')state.money=(state.money||0)+v;
+ if(kind==='chem')state.chemistry=Math.min(100,(state.chemistry||0)+v);
+ if(kind==='skill'){state.prep=Math.min(100,(state.prep||0)+8);state.training=state.training||{};state.training.fatigue=Math.min(100,(state.training.fatigue||0)+3)}
+ if(kind==='sponsor')state.sponsorFans=(state.sponsorFans||0)+120;
+ if(e.id==='sponsor'&&index===0)state.reputation=(state.reputation||0)+8;
+ if(e.id==='roster'&&index===1)state.morale=Math.max(0,(state.morale||0)-2);
+ if(e.id==='patch'&&index===0)state.money=Math.max(0,(state.money||0)-8000);
+ state.clubEvent.choice=index;state.events=state.events||[];state.events.unshift(`${e.title}：${c[3]}`);state.log=state.log||[];state.log.unshift(`本周事件：${e.title}｜${c[3]}`);storySave();toast(c[3]);render()
+}
+function clubEventPanel(){
+ const e=currentClubEvent(),done=state.clubEvent.choice!==null;
+ return `<section class="card wide club-event"><div class="card-head"><h2>本周突发事件</h2><span class="badge">${done?'已处理':'待决定'}</span></div><span class="tag">${e.tag}</span><h3>${e.title}</h3><p class="muted">${e.desc}</p>${done?`<div class="event-result">你选择了：${e.choices[state.clubEvent.choice][0]}<small>${e.choices[state.clubEvent.choice][3]}</small></div>`:`<div class="event-choices">${e.choices.map((c,i)=>`<button onclick="resolveClubEvent(${i})"><b>${c[0]}</b><small>${c[3]}</small></button>`).join('')}</div>`}</section>`
+}
+const MILESTONES=[
+ ['first-win','首胜','赢得第一场正式比赛',s=>s.wins>=1,'¥20,000'],
+ ['full-roster','完整阵容','签下 5 名首发选手',s=>(s.signed||[]).length>=5,'声望 +50'],
+ ['five-wins','稳定发挥','赢得 5 场正式比赛',s=>s.wins>=5,'¥50,000'],
+ ['promotion','更上一层','完成一次联赛晋级',s=>(s.leagueIndex||0)>=1,'声望 +120'],
+ ['popular','受到关注','声望达到 1,000',s=>s.reputation>=1000,'¥35,000']
+];
+function milestonePanel(){
+ state.milestones=state.milestones||{};const rows=MILESTONES.map(m=>{const done=!!state.milestones[m[0]],met=m[3](state);return `<div class="milestone-row ${done?'claimed':''}"><div><b>${m[1]}</b><small>${m[2]}</small></div><span>${done?'已完成':met?'可领取':m[4]}</span>${!done&&met?`<button class="btn alt" onclick="claimMilestone('${m[0]}')">领取</button>`:''}</div>`}).join('');return `<section class="card wide milestone-panel"><div class="card-head"><h2>俱乐部里程碑</h2><span class="muted">长期目标</span></div>${rows}</section>`
+}
+function claimMilestone(id){state.milestones=state.milestones||{};if(state.milestones[id])return toast('奖励已经领取');const m=MILESTONES.find(x=>x[0]===id);if(!m||!m[3](state))return toast('还未达到领取条件');state.milestones[id]=true;if(id==='first-win')state.money+=20000;if(id==='full-roster')state.reputation+=50;if(id==='five-wins')state.money+=50000;if(id==='promotion')state.reputation+=120;if(id==='popular')state.money+=35000;storySave();toast('里程碑奖励已领取：'+m[4]);render()}
+const dashboardWithMoreLoops=guidedDashboard;guidedDashboard=function(){const html=dashboardWithMoreLoops();return html.replace('<div class="guide-flow">',clubEventPanel()+milestonePanel()+'<div class="guide-flow">')};
+render();
