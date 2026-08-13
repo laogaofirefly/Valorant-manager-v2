@@ -421,4 +421,33 @@ function cleanedClub(){ensureStory();const name=state.clubName||'你的战队';c
 club=cleanedClub;
 function cleanedFinance(){ensureStory();const f=monthlyFinance();return `<div class="hero"><div><span class="eyebrow">FINANCE · MONTH ${state.month||1}</span><h2>资金与合同</h2><p>先保证工资和房租，再考虑设施升级和商业投资。</p></div></div><div class="grid stats"><div class="card"><span class="stat-label">当前预算</span><div class="stat-value">¥${(state.money||0).toLocaleString()}</div></div><div class="card"><span class="stat-label">每月工资</span><div class="stat-value">¥${f.payroll.toLocaleString()}</div></div><div class="card"><span class="stat-label">每月场地</span><div class="stat-value">¥${f.rent.toLocaleString()}</div></div><div class="card"><span class="stat-label">赞助收入</span><div class="stat-value">¥${f.income.toLocaleString()}</div></div></div><section class="card wide"><div class="card-head"><h2>合同与赞助</h2><span class="badge">${state.sponsor?'已有合作':'尚未签约'}</span></div><p class="muted">${state.sponsor?'当前赞助收入已计入月度现金流。':'提升声望后可获得更好的商业合同。'}</p><button class="btn" onclick="signSponsor()">${state.sponsor?'查看赞助合同':'谈判赞助'}</button></section>${saveStatusPanel()}`}
 finance=cleanedFinance;
-cleanNavigation();render();
+cleanNavigation();render();// Three-tier fictional-to-authentic competitive progression.
+const FICTIONAL_MARKET_PLAYERS=[
+ ['netR','陈放','Duelist','Night Shift','CN','¥45k','fictional'],['Mika','林米卡','Initiator','Pixel Forge','CN','¥42k','fictional'],['Kite','高启','Controller','Blue Screen','CN','¥40k','fictional'],['Rook','叶骁','Sentinel','Lantern Five','CN','¥38k','fictional'],['Bamboo','赵青','Flex','Metro Wolves','CN','¥36k','fictional'],['ZeroDay','苏野','Duelist','AfterSchool','CN','¥32k','fictional'],['Echo','唐响','Initiator','Redline Club','CN','¥30k','fictional'],['Moss','吴默','Controller','South Gate','CN','¥29k','fictional'],['Nana','何宁','Sentinel','Paper Cup','CN','¥28k','fictional'],['Byte','李柏','Flex','Night Shift','CN','¥27k','fictional'],['Kuro','周黑','Duelist','Pixel Forge','CN','¥25k','fictional'],['Lumi','蒋露','Initiator','Blue Screen','CN','¥24k','fictional']
+];
+players.push(...FICTIONAL_MARKET_PLAYERS);
+const FICTIONAL_PLAYER_IDS=new Set([...STORY_PLAYERS.map(p=>p[0]),...FICTIONAL_MARKET_PLAYERS.map(p=>p[0]),'voltA','voltB','voltC','voltD','voltE']);
+const AUTHENTIC_TEAM_NAMES=['Bilibili Gaming','EDward Gaming','Wolves Esports','Xi Lai Gaming','Nova Esports','Dragon Ranger','Gen.G','Paper Rex','FNATIC','Sentinels'];
+function isFictionalPlayer(p){return !!p&&(FICTIONAL_PLAYER_IDS.has(p[0])||p[6]==='fictional'||p[0]==='something'||String(p[1]).includes('prospect'))}
+// Replace the old pyramid with the requested route: internet cafe -> regional -> Challengers -> VCT.
+LOWER_LEAGUES.length=0;
+LOWER_LEAGUES.push(
+ {id:'internet-cafe',name:'网吧赛',division:'网吧赛',format:'BO1 小组赛 + BO3 决赛',teams:16,required:0,bonus:15000,rep:30,fictional:true},
+ {id:'regional-mini',name:'地区小型赛',division:'地区小型赛',format:'BO3 常规赛 + BO3 淘汰赛',teams:12,required:250,bonus:45000,rep:70,fictional:true},
+ {id:'challengers',name:'Challengers CN',division:'Challengers CN',format:'BO3 常规赛 + BO3 季后赛',teams:10,required:700,bonus:120000,rep:180,authentic:true},
+ {id:'vct',name:'VCT CN',division:'VCT CN',format:'官方 BO3 常规赛 + 季后赛',teams:12,required:1600,bonus:250000,rep:300,authentic:true}
+);
+function progressionLabel(){return currentLeague().division}
+function beginStoryProgression(name){name=(name||'').trim();if(!name)return toast('请输入你的名字');ensureStory();state.playerName=name;state.clubName=name+'电竞';state.division='网吧赛';state.leagueIndex=0;state.leagueSeason={played:0,wins:0,losses:0,points:0};state.month=1;state.week=1;state.money=1000000;state.signed=[];state.contracts={};state.monthlyRent=30000;state.sponsorIncome=0;state.sponsors=[];state.storyFlags.intro=true;state.reputation=100;state.chemistry=35;state.prep=0;state.morale=70;storySave();toast('战队成立，网吧赛之旅开始');render()}
+beginStory=beginStoryProgression;
+function availablePlayerProgression(p){ensureLowerLeagues();if(!p)return false;const authentic=state.leagueIndex>=2;return authentic?!isFictionalPlayer(p):isFictionalPlayer(p)}
+availablePlayer=availablePlayerProgression;
+const oldRosterProgression=roster;
+roster=function(){ensureLowerLeagues();const authentic=state.leagueIndex>=2;const old=state.rosterRegion;let html=oldRosterProgression();const note=authentic?'当前级别开放真实职业选手市场（Challengers CN / VCT CN）。':'当前级别仅开放虚构的网吧与地区选手；晋级 Challengers CN 后解锁真实职业选手。';html=html.replace('</div><div class="tabs">','</div><p class="progression-market-note">'+note+'</p><div class="tabs">');html=html.replace(/<div class="grid player-grid">/,'<div class="grid player-grid">');return html};
+function lowerOpponents(){return state.leagueIndex<2?['网吧黑屏队','蓝屏俱乐部','夜班五人组','像素工坊','地铁出口','红灯笼电竞']:['Bilibili Gaming','EDward Gaming','Wolves Esports','Xi Lai Gaming','Nova Esports','Dragon Ranger']}
+lowerLeagueFixtures=function(){ensureLowerLeagues();const l=currentLeague(),rivals=lowerOpponents();return `<section class="card wide"><div class="card-head"><h2>${l.name}赛程</h2><span class="muted">${l.authentic?'真实职业队伍':'虚构地方队伍'} · ${l.format}</span></div>${Array.from({length:8},(_,i)=>{const opp=rivals[(i+state.week)%rivals.length],done=i<state.leagueSeason.played,win=done&&i<state.leagueSeason.wins;return `<div class="schedule-row"><small>第 ${i+1} 场</small><b>${state.clubName||'你的战队'} <span class="muted">vs</span> ${opp}</b><span class="badge">${done?(win?'胜利':'失利'):l.format.split(' ')[0]}</span>${!done&&i===state.leagueSeason.played?'<button class="btn alt" onclick="startLowerMatch()">进入比赛</button>':''}</div>`}).join('')}</section>`}
+const oldCompetitionProgression=competitionInfo;
+competitionInfo=function(){ensureLowerLeagues();const l=currentLeague();const intro=l.index===0?'从网吧包间打出名气，寻找第一批可靠的选手。':l.index===1?'在地区赛场建立战队品牌，争取进入 Challengers CN。':l.index===2?'这里开始使用真实的 Challengers CN 队伍与职业选手。':'最高级别赛场：对手、选手与赛事队伍均来自真实 VCT CN 体系。';return `<section class="card wide progression-card"><div class="card-head"><h2>${l.name}</h2><span class="badge">阶段 ${state.leagueIndex+1}/4</span></div><p>${intro}</p><div class="event-meta"><span>赛制：${l.format}</span><span>参赛队：${l.teams} 队</span><span>${l.authentic?'真实赛事与真实职业选手':'虚构赛事、队伍与选手'}</span><span>赛季：${state.leagueSeason.played}/8 场</span></div></section>`}
+const oldGuidedProgression=guidedDashboard;
+guidedDashboard=function(){return oldGuidedProgression().replace('从城市公开赛开始','从网吧赛开始').replace('城市公开赛','网吧赛')};
+render();
