@@ -760,3 +760,30 @@ ensureExpansion2();checkMilestones();render();// Performance layer: coalesce rep
   };
   window.addEventListener('pagehide',()=>{if(frame){if(window.cancelAnimationFrame)cancelAnimationFrame(frame);else clearTimeout(frame);queued=false;frame=0;immediateRender()}});
 })();
+// Unified persistence: one complete snapshot per write instead of nested save chains.
+(function(){
+  const STORAGE_KEY='volt-save';
+  let lastSerialized='';
+  function writeSnapshot(){
+    try{
+      const serialized=JSON.stringify(state);
+      if(serialized===lastSerialized)return;
+      localStorage.setItem(STORAGE_KEY,serialized);
+      lastSerialized=serialized;
+    }catch(error){console.warn('VOLT save failed',error);toast('存档写入失败，请检查浏览器存储空间')}
+  }
+  window.persistGameState=writeSnapshot;
+  save=function(){
+    if(typeof ensureMessageState==='function')ensureMessageState();
+    writeSnapshot();
+  };
+  storySave=function(){
+    if(typeof ensureStory==='function')ensureStory();
+    if(typeof ensureDevelopment==='function')ensureDevelopment();
+    if(typeof ensureMessageState==='function')ensureMessageState();
+    writeSnapshot();
+  };
+  gameplaySave=save;
+  moreSave=storySave;
+  window.addEventListener('pagehide',writeSnapshot);
+})();
